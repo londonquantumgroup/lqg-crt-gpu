@@ -662,9 +662,7 @@ int main(int argc, char** argv) {
         total_divs += M;
         
 #ifndef NO_CGBN
-        if (DIVISOR_BITS > 64) {
             run_cgbn_benchmark(M, N, divisors, d_N_single);
-        }
 #endif
     }
     
