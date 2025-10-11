@@ -13,7 +13,11 @@
 #define CGBN_USE_GMP 1
 #endif
 
-// Include cgbn.h - CGBN_NO_IMPLEMENTATION will be set by CMake for most files
+// CRITICAL FIX: Define inline functions to prevent multiple definitions
+#define CGBN_ALLOCATE_ERROR_REPORT inline_cgbn_error_report_alloc
+#define CGBN_FREE_ERROR_REPORT inline_cgbn_error_report_free
+
+// Include cgbn.h
 #include <cgbn/cgbn.h>
 
 using boost::multiprecision::cpp_int;
@@ -23,6 +27,18 @@ typedef cgbn_context_t<CGBN_TPI>               cgbn_context;
 typedef cgbn_env_t<cgbn_context, CGBN_BITS>    cgbn_env;
 typedef cgbn_env::cgbn_t                       cgbn_bn_t;
 typedef cgbn_mem_t<CGBN_BITS>                  cgbn_bn_mem_t;
+
+// Inline wrapper functions to prevent multiple definitions
+static inline cgbn_error_report_t* inline_cgbn_error_report_alloc() {
+    cgbn_error_report_t* report = nullptr;
+    cudaMallocManaged(&report, sizeof(cgbn_error_report_t));
+    if (report) memset(report, 0, sizeof(cgbn_error_report_t));
+    return report;
+}
+
+static inline void inline_cgbn_error_report_free(cgbn_error_report_t* report) {
+    if (report) cudaFree(report);
+}
 
 // Utility functions
 static inline void cppint_to_cgbn_mem(const cpp_int &x, cgbn_bn_mem_t &out) {
