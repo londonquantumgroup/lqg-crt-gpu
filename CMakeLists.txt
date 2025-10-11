@@ -51,6 +51,7 @@ add_compile_definitions(
     CGBN_TPI=${CGBN_TPI}
     FAST_REMAINDER_TREE=${FAST_REMAINDER_TREE}
     GPU_GENERATE_DIVISORS=${GPU_GENERATE_DIVISORS}
+    CGBN_USE_GMP=1 
 )
 
 # CGBN configuration
