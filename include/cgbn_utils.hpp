@@ -5,6 +5,12 @@
 #include <gmp.h>
 #include <gmpxx.h>
 #define CGBN_USE_GMP 1
+
+// --- Fix: prevent CGBN error-report symbols from being defined in multiple .cu files ---
+#ifndef CGBN_NO_IMPLEMENTATION
+#define CGBN_NO_IMPLEMENTATION
+#endif
+
 #include <cgbn/cgbn.h>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <cstring>
