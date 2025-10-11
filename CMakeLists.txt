@@ -135,14 +135,17 @@ target_compile_definitions(crt_benchmark PRIVATE
 # CRITICAL FIX: Set CGBN_NO_IMPLEMENTATION for all .cu files
 # except cgbn_impl.cu (which contains the actual implementation)
 # ============================================================
-set_source_files_properties(
-    src/gpu_kernels.cu
-    src/main.cu
-    PROPERTIES
-    COMPILE_DEFINITIONS "CGBN_NO_IMPLEMENTATION"
+
+# Prevent CGBN error-report functions from being defined multiple times
+set_source_files_properties(src/gpu_kernels.cu PROPERTIES
+    COMPILE_FLAGS "-DCGBN_NO_IMPLEMENTATION"
 )
 
-# Only cgbn_impl.cu gets the GMP backend enabled
+set_source_files_properties(src/main.cu PROPERTIES
+    COMPILE_FLAGS "-DCGBN_NO_IMPLEMENTATION"
+)
+
+# Only cgbn_impl.cu gets the full CGBN implementation with GMP backend
 set_source_files_properties(src/cgbn_impl.cu PROPERTIES
     COMPILE_FLAGS "-DCGBN_USE_GMP=1"
 )
