@@ -103,7 +103,7 @@ add_executable(crt_benchmark
 
 # Prevent multiple CGBN definitions by defining CGBN_NO_IMPLEMENTATION only for main.cu
 set_source_files_properties(src/gpu_kernels.cu PROPERTIES
-    COMPILE_DEFINITIONS "CGBN_NO_IMPLEMENTATION"
+    COMPILE_DEFINITIONS "NO_CGBN;CGBN_NO_IMPLEMENTATION"
 )
 
 
