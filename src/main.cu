@@ -1,4 +1,3 @@
-#define __CUDACC__
 #include "types.hpp"
 #include "timing.hpp"
 #include "bigint_utils.hpp"
