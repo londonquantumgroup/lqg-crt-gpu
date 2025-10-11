@@ -52,7 +52,10 @@ static inline void host_cgbn_error_report_init(cgbn_error_report_t *report) {
     }
 }
 
-#endif
+// Now include the full CGBN definitions for files that need them
+// Each .cu file must include cgbn.h separately with proper defines
+
+#endif // NO_CGBN
 
 // Use __host__ __device__ to allow use in both CPU and GPU code
 __host__ __device__ static inline void cppint_to_cgbn_mem_impl(const cpp_int &x, cgbn_bn_mem_t &out) {
