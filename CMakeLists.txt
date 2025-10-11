@@ -34,12 +34,18 @@ endif()
 
 add_executable(lqg_crt_gpu ${SOURCES})
 
-# Force CUDA compilation for .cpp files that use CUDA headers
+# Force CUDA compilation for certain .cpp files
 set_source_files_properties(
     src/main.cpp
-    src/cgbn_benchmark.cpp
     PROPERTIES LANGUAGE CUDA
 )
+
+if (ENABLE_CGBN)
+  set_source_files_properties(
+      src/cgbn_benchmark.cpp
+      PROPERTIES LANGUAGE CUDA
+  )
+endif()
 
 target_link_libraries(lqg_crt_gpu PRIVATE crt_headers)
 
