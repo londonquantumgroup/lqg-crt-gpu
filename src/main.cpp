@@ -6,6 +6,7 @@
 #include "../include/crt_gpu_kernels.cuh"
 #include "../include/crt_host_helpers.hpp"
 #include "../include/crt_cpu.hpp"
+#include "../include/cgbn_benchmark.hpp"
 
 #include <unordered_set>
 #include <fstream>
