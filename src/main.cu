@@ -9,6 +9,7 @@
 #include "gpu_kernels.cuh"
 
 #ifndef NO_CGBN
+#define CGBN_NO_IMPLEMENTATION
 #include "cgbn_utils.hpp"
 #endif
 
