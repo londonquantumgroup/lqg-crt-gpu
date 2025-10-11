@@ -19,6 +19,16 @@
 #include <unordered_set>
 #include <limits>
 
+#ifndef NO_CGBN
+__global__ void cgbn_divrem_kernel(cgbn_error_report_t *report,
+                                   const cgbn_bn_mem_t *d_N_single,
+                                   cgbn_bn_mem_t *divs,
+                                   cgbn_bn_mem_t *qouts,
+                                   cgbn_bn_mem_t *routs,
+                                   int count);
+#endif
+
+
 void print_usage(const char* prog_name) {
     fprintf(stderr, "Usage:\n");
     fprintf(stderr, "  %s N M1 [M2 M3 ...]\n", prog_name);
