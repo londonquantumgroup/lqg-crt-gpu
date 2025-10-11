@@ -1,6 +1,6 @@
-// Ensure GMP support is enabled for CGBN
+// src/cgbn_impl.cu
 #include <gmp.h>
 #include <gmpxx.h>
 #define CGBN_USE_GMP 1
-// cgbn_impl.cu
-#include "cgbn/cgbn.h"
+#include "cgbn/cgbn.h"   // no CGBN_NO_IMPLEMENTATION here
+// (your cgbn kernels / helpers live here)
