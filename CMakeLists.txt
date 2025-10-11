@@ -97,7 +97,7 @@ endif()
 add_executable(crt_benchmark
     ${CPP_SOURCES}
     ${CUDA_SOURCES}
-    src/main.cpp
+    src/main.cu
 )
 
 
