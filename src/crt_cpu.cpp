@@ -6,7 +6,7 @@
 std::vector<u32> choose_moduli_dynamic(const std::vector<u32>& primes,
                                        const cpp_int& N,
                                        int safety_bits,
-                                       int* out_k=nullptr) {
+                                       int* out_k) {
   size_t nbits = bitlen_cppint(N);
   double target_bits = (double)nbits + (double)safety_bits;
   std::vector<u32> m; m.reserve(128);
@@ -20,33 +20,6 @@ std::vector<u32> choose_moduli_dynamic(const std::vector<u32>& primes,
   std::reverse(m.begin(), m.end());
   if (out_k) *out_k = (int)m.size();
   return m;
-}
-
-// Forward declaration for external linkage
-extern std::vector<u32> choose_moduli_dynamic(
-    const std::vector<u32>& primes,
-    const cpp_int& N,
-    int safety_bits,
-    int* out_k);
-
-// choose CRT moduli to cover |N| + safety bits
-std::vector<u32> choose_moduli_dynamic(const std::vector<u32>& primes,
-    const cpp_int& N,
-    int safety_bits,
-    int* out_k) {
-size_t nbits = bitlen_cppint(N);
-double target_bits = (double)nbits + (double)safety_bits;
-std::vector<u32> m; m.reserve(128);
-double acc_bits = 0.0;
-for (size_t idx = primes.size(); idx-- > 0; ) {
-u32 p = primes[idx];
-acc_bits += std::log2((double)p);
-m.push_back(p);
-if (acc_bits >= target_bits) break;
-}
-std::reverse(m.begin(), m.end());
-if (out_k) *out_k = (int)m.size();
-return m;
 }
 
 // generate divisors (32/64/128+) excluding CRT moduli

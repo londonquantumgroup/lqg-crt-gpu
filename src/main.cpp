@@ -290,8 +290,19 @@ int main(int argc, char** argv) {
       }
       CUDA_CHECK(cudaFree(d_P_void)); CUDA_CHECK(cudaFree(d_out_void));
     } else {
-      fprintf(stderr, "DIVISOR_BITS=%d path uses big-int divisors (CPU only here).\n", DIVISOR_BITS);
-    }
+        // 128+ bit divisors: compute CPU baseline for CGBN comparison
+        auto tstart = now_tp();
+        for (int i = 0; i < M; ++i) {
+          volatile cpp_int rem = N % divisors[i];  // prevent optimization
+          (void)rem;
+        }
+        total_cpu_ms = ms_since(tstart);
+        
+        fprintf(stderr, "DIVISOR_BITS=%d: Big-int divisors\n", DIVISOR_BITS);
+        
+        // Run CGBN benchmark
+        run_cgbn_benchmark(N, divisors, M, total_cpu_ms / double(M));
+      }
 
     double gpu_mps = (total_gpu_ms>0) ? (M/1e6) / (total_gpu_ms/1000.0) : 0.0;
     double cpu_mps = (total_cpu_ms>0) ? (M/1e6) / (total_cpu_ms/1000.0) : 0.0;
