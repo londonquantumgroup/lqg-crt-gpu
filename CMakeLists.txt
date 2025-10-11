@@ -115,10 +115,10 @@ target_link_libraries(crt_benchmark
     gmpxx
 )
 
-# Compiler flags
+# Compiler flags - add -fpermissive for CUDA to handle Boost compatibility
 target_compile_options(crt_benchmark PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-O3 -Wall -Wextra>
-    $<$<COMPILE_LANGUAGE:CUDA>:-O3 --use_fast_math -Xcompiler=-Wall>
+    $<$<COMPILE_LANGUAGE:CUDA>:-O3 --use_fast_math -Xcompiler=-Wall,-Wno-class-memaccess,-fpermissive>
 )
 
 # Print configuration summary
