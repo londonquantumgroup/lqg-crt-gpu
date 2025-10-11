@@ -90,11 +90,11 @@ else()
     endif()
 endif()
 
-# Executable - src/main.cpp is CUDA file
+# Executable
 add_executable(crt_benchmark
     ${CPP_SOURCES}
     ${CUDA_SOURCES}
-    src/main.cpp  # This is treated as CUDA
+    src/main.cpp
 )
 
 # Mark main.cpp as CUDA
@@ -115,11 +115,14 @@ target_link_libraries(crt_benchmark
     gmpxx
 )
 
-# Compiler flags - add -fpermissive for CUDA to handle Boost compatibility
+# Compiler flags - add separable compilation for CUDA to avoid multiple definition issues
 target_compile_options(crt_benchmark PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-O3 -Wall -Wextra>
-    $<$<COMPILE_LANGUAGE:CUDA>:-O3 --use_fast_math -Xcompiler=-Wall,-Wno-class-memaccess,-fpermissive>
+    $<$<COMPILE_LANGUAGE:CUDA>:-O3 --use_fast_math -Xcompiler=-Wall,-Wno-class-memaccess,-fpermissive --expt-relaxed-constexpr>
 )
+
+# Enable separable compilation for CUDA to handle device code properly
+set_property(TARGET crt_benchmark PROPERTY CUDA_SEPARABLE_COMPILATION ON)
 
 # Print configuration summary
 message(STATUS "")

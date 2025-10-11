@@ -16,7 +16,8 @@ typedef cgbn_env_t<cgbn_context, CGBN_BITS>    cgbn_env;
 typedef cgbn_env::cgbn_t                       cgbn_bn_t;
 typedef cgbn_mem_t<CGBN_BITS>                  cgbn_bn_mem_t;
 
-static inline void cppint_to_cgbn_mem(const cpp_int &x, cgbn_bn_mem_t &out) {
+// Use __host__ __device__ to allow use in both CPU and GPU code
+__host__ __device__ static inline void cppint_to_cgbn_mem_impl(const cpp_int &x, cgbn_bn_mem_t &out) {
     for (size_t i = 0; i < sizeof(out._limbs) / sizeof(out._limbs[0]); ++i) {
         out._limbs[i] = 0u;
     }
@@ -30,12 +31,21 @@ static inline void cppint_to_cgbn_mem(const cpp_int &x, cgbn_bn_mem_t &out) {
     }
 }
 
-static inline cpp_int cgbn_mem_to_cppint(const cgbn_bn_mem_t &x) {
+// Wrapper to avoid multiple definitions
+static inline void cppint_to_cgbn_mem(const cpp_int &x, cgbn_bn_mem_t &out) {
+    cppint_to_cgbn_mem_impl(x, out);
+}
+
+__host__ __device__ static inline cpp_int cgbn_mem_to_cppint_impl(const cgbn_bn_mem_t &x) {
     cpp_int result = 0;
     for (int i = (sizeof(x._limbs) / sizeof(x._limbs[0])) - 1; i >= 0; --i) {
         result = (result << 32) | cpp_int(x._limbs[i]);
     }
     return result;
+}
+
+static inline cpp_int cgbn_mem_to_cppint(const cgbn_bn_mem_t &x) {
+    return cgbn_mem_to_cppint_impl(x);
 }
 
 static inline void host_cgbn_error_report_init(cgbn_error_report_t *report) {
