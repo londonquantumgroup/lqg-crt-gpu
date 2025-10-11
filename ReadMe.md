@@ -4,7 +4,7 @@ Invented by Sebastian Kot.
 This repository and its contents are part of the provisional patent filing:
 “High-Throughput Modular Division on GPUs via a CRT Number Theoretic Parallelizable Framework.”
 
-Patent protection pending — U.S. Provisional Patent Application filed September 2025.
+Patent pending — U.S. Provisional Patent Application filed September 2025.
 
 Unauthorized reproduction, modification, or commercial use of any part of this system,
 including the underlying algorithms, documentation, or code, is strictly prohibited
