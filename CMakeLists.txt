@@ -133,7 +133,7 @@ target_compile_definitions(crt_benchmark PRIVATE
 
 # --- Critical fix: enable GMP backend in CGBN implementation only ---
 set_source_files_properties(src/cgbn_impl.cu PROPERTIES
-    COMPILE_DEFINITIONS "CGBN_USE_GMP=1"
+    COMPILE_FLAGS "-DCGBN_USE_GMP=1"
 )
 
 # Disable full implementation in GPU kernels (header-only mode)
