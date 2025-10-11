@@ -8,6 +8,24 @@
 
 #include <unordered_set>
 #include <fstream>
+#include <iostream>
+#include <vector>
+#include <chrono>
+#include <string>
+#include <cmath>
+
+/*** forward declarations needed by this TU ***/
+#include <boost/multiprecision/cpp_int.hpp>
+
+std::vector<uint32_t> choose_moduli_dynamic(const std::vector<uint32_t>& primes,
+                                            const boost::multiprecision::cpp_int& N,
+                                            int bit_limit,
+                                            int* k_dyn);
+
+std::vector<boost::multiprecision::cpp_int> generate_divisors(size_t M,
+                                                              int bits,
+                                                              const std::unordered_set<uint32_t>& mset);
+/*** end forward declarations ***/
 
 int main(int argc, char** argv) {
   // Basic device sanity
