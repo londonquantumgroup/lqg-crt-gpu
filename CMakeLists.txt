@@ -15,10 +15,19 @@ target_include_directories(crt_headers INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/inc
 # Find Boost (header-only multiprecision)
 find_package(Boost REQUIRED)
 
+add_compile_options(-fpermissive)
+
 add_executable(lqg_crt_gpu
   src/main.cpp
   src/crt_cpu.cpp
   src/crt_gpu.cu
+)
+
+# Force CUDA compilation for .cpp files that use CUDA headers
+set_source_files_properties(
+    src/main.cpp
+    src/crt_cpu.cpp
+    PROPERTIES LANGUAGE CUDA
 )
 
 target_link_libraries(lqg_crt_gpu PRIVATE crt_headers)
