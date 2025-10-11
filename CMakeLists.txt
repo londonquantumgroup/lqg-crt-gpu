@@ -21,7 +21,11 @@ set(FAST_REMAINDER_TREE "1" CACHE STRING "Use fast remainder tree")
 set(GPU_GENERATE_DIVISORS "1" CACHE STRING "Generate divisors on GPU")
 set(CGBN_INCLUDE_DIR "" CACHE PATH "Path to CGBN include directory")
 
-# Manually locate GMP if CMake doesn't have a FindGMP.cmake
+# ============================================================
+# CREATE FindGMP.cmake BEFORE CALLING find_package(GMP)
+# ============================================================
+file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/cmake")
+
 if(NOT EXISTS "${CMAKE_SOURCE_DIR}/cmake/FindGMP.cmake")
     file(WRITE "${CMAKE_SOURCE_DIR}/cmake/FindGMP.cmake" "
 find_path(GMP_INCLUDE_DIR NAMES gmp.h)
@@ -38,6 +42,7 @@ mark_as_advanced(GMP_LIBRARY GMPXX_LIBRARY GMP_INCLUDE_DIR)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
 # ============================================================
 # DEPENDENCIES
 # ============================================================
@@ -126,13 +131,12 @@ target_compile_definitions(crt_benchmark PRIVATE
     GPU_GENERATE_DIVISORS=${GPU_GENERATE_DIVISORS}
 )
 
-# --- Critical fix ---
-# Force GMP define only for cgbn_impl.cu so cgbn_cpu.h sees it
+# --- Critical fix: enable GMP backend in CGBN implementation only ---
 set_source_files_properties(src/cgbn_impl.cu PROPERTIES
     COMPILE_DEFINITIONS "CGBN_USE_GMP=1"
 )
 
-# Disable full CGBN implementation in GPU kernels (header-only mode)
+# Disable full implementation in GPU kernels (header-only mode)
 set_source_files_properties(src/gpu_kernels.cu PROPERTIES
     COMPILE_DEFINITIONS "CGBN_NO_IMPLEMENTATION"
 )
