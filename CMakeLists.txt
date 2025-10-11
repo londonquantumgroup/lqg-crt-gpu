@@ -97,8 +97,6 @@ add_executable(crt_benchmark
     src/main.cpp
 )
 
-# Mark main.cpp as CUDA
-set_source_files_properties(src/main.cpp PROPERTIES LANGUAGE CUDA)
 
 # Set CUDA architecture
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
