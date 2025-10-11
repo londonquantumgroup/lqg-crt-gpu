@@ -45,13 +45,14 @@ set(CUDA_SOURCES
 )
 
 # Compile definitions
-add_compile_definitions(
+# Force CGBN_USE_GMP for both host and CUDA compilation
+target_compile_definitions(crt_benchmark PRIVATE
+    CGBN_USE_GMP=1
     DIVISOR_BITS=${DIVISOR_BITS}
     CGBN_BITS=${CGBN_BITS}
     CGBN_TPI=${CGBN_TPI}
     FAST_REMAINDER_TREE=${FAST_REMAINDER_TREE}
     GPU_GENERATE_DIVISORS=${GPU_GENERATE_DIVISORS}
-    CGBN_USE_GMP=1 
 )
 
 # CGBN configuration
