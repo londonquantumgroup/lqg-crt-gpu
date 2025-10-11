@@ -1,3 +1,4 @@
+#include "gpu_kernels.cuh"
 #include "types.hpp"
 
 // Only include CGBN if not disabled
