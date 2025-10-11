@@ -21,7 +21,6 @@ set(CGBN_INCLUDE_DIR "" CACHE PATH "Path to CGBN include directory")
 # Find packages
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(GMP REQUIRED)
-
 find_package(CUDAToolkit REQUIRED)
 include_directories(${CUDAToolkit_INCLUDE_DIRS})
 
@@ -32,7 +31,7 @@ include_directories(
     ${GMP_INCLUDE_DIRS}
 )
 
-# Source files - SEPARATE C++ and CUDA
+# Source files
 set(CPP_SOURCES
     src/primes.cpp
     src/modular_arithmetic.cpp
@@ -42,17 +41,6 @@ set(CPP_SOURCES
 
 set(CUDA_SOURCES
     src/gpu_kernels.cu
-)
-
-# Compile definitions
-# Force CGBN_USE_GMP for both host and CUDA compilation
-target_compile_definitions(crt_benchmark PRIVATE
-    CGBN_USE_GMP=1
-    DIVISOR_BITS=${DIVISOR_BITS}
-    CGBN_BITS=${CGBN_BITS}
-    CGBN_TPI=${CGBN_TPI}
-    FAST_REMAINDER_TREE=${FAST_REMAINDER_TREE}
-    GPU_GENERATE_DIVISORS=${GPU_GENERATE_DIVISORS}
 )
 
 # CGBN configuration
@@ -95,8 +83,7 @@ else()
     endif()
 endif()
 
-# Executable
-
+# Executable target
 add_executable(crt_benchmark
     ${CPP_SOURCES}
     ${CUDA_SOURCES}
@@ -104,20 +91,26 @@ add_executable(crt_benchmark
     src/cgbn_impl.cu
 )
 
-target_compile_definitions(crt_benchmark PRIVATE CGBN_USE_GMP=1)
+# ✅ Force CGBN_USE_GMP for both host and CUDA compilation
+target_compile_definitions(crt_benchmark PRIVATE
+    CGBN_USE_GMP=1
+    DIVISOR_BITS=${DIVISOR_BITS}
+    CGBN_BITS=${CGBN_BITS}
+    CGBN_TPI=${CGBN_TPI}
+    FAST_REMAINDER_TREE=${FAST_REMAINDER_TREE}
+    GPU_GENERATE_DIVISORS=${GPU_GENERATE_DIVISORS}
+)
 
-# Prevent multiple CGBN definitions by defining CGBN_NO_IMPLEMENTATION 
+# Prevent multiple CGBN definitions by defining CGBN_NO_IMPLEMENTATION
 set_source_files_properties(src/gpu_kernels.cu PROPERTIES
     COMPILE_DEFINITIONS "NO_CGBN;CGBN_NO_IMPLEMENTATION"
 )
-
 
 # Set CUDA architecture
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
     set(CMAKE_CUDA_ARCHITECTURES 75 80 86)
 endif()
 set_property(TARGET crt_benchmark PROPERTY CUDA_ARCHITECTURES ${CMAKE_CUDA_ARCHITECTURES})
-
 message(STATUS "Target CUDA architectures: ${CMAKE_CUDA_ARCHITECTURES}")
 
 # Link libraries
@@ -127,13 +120,13 @@ target_link_libraries(crt_benchmark
     gmpxx
 )
 
-# Compiler flags - add separable compilation for CUDA to avoid multiple definition issues
+# Compiler flags
 target_compile_options(crt_benchmark PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-O3 -Wall -Wextra>
     $<$<COMPILE_LANGUAGE:CUDA>:-O3 --use_fast_math -Xcompiler=-Wall,-Wno-class-memaccess,-fpermissive --expt-relaxed-constexpr>
 )
 
-# Enable separable compilation for CUDA to handle device code properly
+# Enable separable compilation
 set_property(TARGET crt_benchmark PROPERTY CUDA_SEPARABLE_COMPILATION ON)
 
 # Print configuration summary
