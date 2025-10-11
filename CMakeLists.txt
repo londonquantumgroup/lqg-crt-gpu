@@ -17,15 +17,27 @@ find_package(Boost REQUIRED)
 
 add_compile_options(-fpermissive)
 
-add_executable(lqg_crt_gpu
+# Source files
+set(SOURCES
   src/main.cpp
   src/crt_cpu.cpp
   src/crt_gpu.cu
 )
 
+# Add CGBN sources if enabled
+if (ENABLE_CGBN)
+  list(APPEND SOURCES 
+    src/crt_cgbn.cu
+    src/cgbn_benchmark.cpp
+  )
+endif()
+
+add_executable(lqg_crt_gpu ${SOURCES})
+
 # Force CUDA compilation for .cpp files that use CUDA headers
 set_source_files_properties(
     src/main.cpp
+    src/cgbn_benchmark.cpp
     PROPERTIES LANGUAGE CUDA
 )
 
@@ -38,9 +50,7 @@ set_target_properties(lqg_crt_gpu PROPERTIES
   CUDA_RESOLVE_DEVICE_SYMBOLS ON
 )
 
-# ===========================
-# ✅ ADD DIVISOR_BITS SUPPORT
-# ===========================
+# DIVISOR_BITS support
 if (NOT DEFINED DIVISOR_BITS)
   set(DIVISOR_BITS 128)
 endif()
@@ -59,20 +69,40 @@ target_compile_options(lqg_crt_gpu PRIVATE
   >
 )
 
-# ===========================
-# ✅ Optional: Enable CGBN/GMP
-# ===========================
+# Optional: Enable CGBN/GMP
 if (ENABLE_CGBN)
-  target_compile_definitions(lqg_crt_gpu PRIVATE CGBN_USE_GMP=1)
+  target_compile_definitions(lqg_crt_gpu PRIVATE ENABLE_CGBN=1)
+  
   find_path(GMP_INCLUDE_DIR NAMES gmpxx.h gmp.h)
   find_library(GMP_LIB NAMES gmp)
   find_library(GMPXX_LIB NAMES gmpxx)
+  
   if (GMP_INCLUDE_DIR AND GMP_LIB AND GMPXX_LIB)
     target_include_directories(lqg_crt_gpu PRIVATE ${GMP_INCLUDE_DIR})
     target_link_libraries(lqg_crt_gpu PRIVATE ${GMPXX_LIB} ${GMP_LIB})
+    message(STATUS "CGBN enabled with GMP support")
   else()
     message(FATAL_ERROR "ENABLE_CGBN=ON but GMP not found")
   endif()
+  
+  # Find CGBN headers
+  find_path(CGBN_INCLUDE_DIR 
+    NAMES cgbn/cgbn.h
+    PATHS ${CMAKE_CURRENT_SOURCE_DIR}/include
+          ${CMAKE_CURRENT_SOURCE_DIR}/CGBN/include
+          /usr/local/include
+          /usr/include
+  )
+  
+  if (CGBN_INCLUDE_DIR)
+    target_include_directories(lqg_crt_gpu PRIVATE ${CGBN_INCLUDE_DIR})
+    message(STATUS "Found CGBN at: ${CGBN_INCLUDE_DIR}")
+  else()
+    message(FATAL_ERROR "ENABLE_CGBN=ON but CGBN headers not found. "
+                        "Run: git clone https://github.com/NVlabs/CGBN.git")
+  endif()
+else()
+  message(STATUS "CGBN disabled (use -DENABLE_CGBN=ON to enable)")
 endif()
 
 # Boost headers
