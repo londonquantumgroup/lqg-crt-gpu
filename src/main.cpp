@@ -174,12 +174,12 @@ int main(int argc, char** argv) {
     if (DIVISOR_BITS == 32) {
       CUDA_CHECK(cudaMalloc(&d_P_void,  M*sizeof(u32)));
       CUDA_CHECK(cudaMalloc(&d_out_void,M*sizeof(u32)));
-    } else {
+    } else if (DIVISOR_BITS == 64) {
       CUDA_CHECK(cudaMalloc(&d_P_void,  M*sizeof(u64)));
       CUDA_CHECK(cudaMalloc(&d_out_void,M*sizeof(u64)));
     }
 
-    if (GPU_GENERATE_DIVISORS) {
+    if (DIVISOR_BITS <= 64 && GPU_GENERATE_DIVISORS) {
       int threads=256, blocks=(M+threads-1)/threads;
       if (DIVISOR_BITS == 32) {
         generate_divisors_kernel_32<<<blocks,threads>>>(BASE_SEED_32, M, (u32*)d_P_void);
@@ -188,7 +188,7 @@ int main(int argc, char** argv) {
       }
       CUDA_CHECK(cudaDeviceSynchronize());
       pgen_ms = ms_since(t_pgen_start);
-    } else {
+    } else if (DIVISOR_BITS <= 64) {
       if (DIVISOR_BITS == 32) {
         std::vector<u32> P_cpu(M);
         for (int i=0;i<M;++i) P_cpu[i] = (u32)divisors[i];
@@ -246,6 +246,7 @@ int main(int argc, char** argv) {
         }
       }
       CUDA_CHECK(cudaFree(d_P_void)); CUDA_CHECK(cudaFree(d_out_void));
+      
     } else if (DIVISOR_BITS == 64) {
       std::vector<u64> gpu_chunk, cpu_chunk;
       for (int offset=0; offset<M; offset+=CHUNK_SIZE) {
@@ -289,21 +290,18 @@ int main(int argc, char** argv) {
         }
       }
       CUDA_CHECK(cudaFree(d_P_void)); CUDA_CHECK(cudaFree(d_out_void));
+      
     } else {
-        // 128+ bit divisors: compute CPU baseline for CGBN comparison
-        auto tstart = now_tp();
-        for (int i = 0; i < M; ++i) {
-          volatile cpp_int rem = N % divisors[i];  // prevent optimization
-          (void)rem;
-        }
-        total_cpu_ms = ms_since(tstart);
-        
-        fprintf(stderr, "DIVISOR_BITS=%d: Big-int divisors\n", DIVISOR_BITS);
-        
-        // Run CGBN benchmark
-        run_cgbn_benchmark(N, divisors, M, total_cpu_ms / double(M));
+      // 128+ bit divisors: compute CPU baseline only (no CRT-GPU kernel)
+      auto tstart = now_tp();
+      for (int i = 0; i < M; ++i) {
+        volatile cpp_int rem = N % divisors[i];  // prevent optimization
+        (void)rem;
       }
+      total_cpu_ms = ms_since(tstart);
+    }
 
+    // Calculate metrics (works for all divisor sizes)
     double gpu_mps = (total_gpu_ms>0) ? (M/1e6) / (total_gpu_ms/1000.0) : 0.0;
     double cpu_mps = (total_cpu_ms>0) ? (M/1e6) / (total_cpu_ms/1000.0) : 0.0;
 
@@ -319,6 +317,7 @@ int main(int argc, char** argv) {
     total_runtime_ms += perM_runtime_ms;
     total_divs += M;
 
+    // Print CRT results
     printf("\n=== Results for M=%d (%d-bit divisors) ===\n", M, DIVISOR_BITS);
     printf("M=%d: ms per candidate: GPU=%.9f, CPU=%.9f | CPU/GPU crossover @ M=%.9f\n",
            M, ms_per_cand_gpu, ms_per_cand_cpu, Mcross);
@@ -332,18 +331,26 @@ int main(int argc, char** argv) {
       printf("CRT Kernel-only: %.2f M/s\n", gpu_mps);
       printf("CRT Full (amortized): %.2f M/s\n", crt_full_mps);
     } else {
-      printf("k=%d%s candidates=%d | Big-int divisors (GPU path not enabled here) | CPU %.3f ms (%.2f M/s)\n",
-             k_used, (k < 0 ? " (dyn)":""), M,
-             total_cpu_ms, cpu_mps);
+      printf("k=%d%s candidates=%d | Big-int divisors | CPU %.3f ms (%.2f M/s)\n",
+             k_used, (k < 0 ? " (dyn)":""), M, total_cpu_ms, cpu_mps);
     }
-  }
 
+    // ✅ ALWAYS run CGBN benchmark for comparison (at ALL divisor sizes)
+    run_cgbn_benchmark(N, divisors, M, ms_per_cand_cpu);
+    
+  } // end M_list loop
+
+  // Final summary
   double crt_full_ms_total = total_setup_ms + total_runtime_ms;
   double crt_full_Mps_amortized = (total_divs / 1e6) / (crt_full_ms_total / 1000.0);
   printf("\n=== Amortized CRT Full Throughput Across All M ===\n");
   printf("Total setup: %.2f ms | Total runtime: %.2f ms | Total divisions: %lld\n",
          total_setup_ms, total_runtime_ms, total_divs);
   printf("Amortized CRT-Full Throughput: %.2f M/s\n", crt_full_Mps_amortized);
+
+  // Cleanup
+  if (d_c) CUDA_CHECK(cudaFree(d_c));
+  if (d_m) CUDA_CHECK(cudaFree(d_m));
 
   return 0;
 }
