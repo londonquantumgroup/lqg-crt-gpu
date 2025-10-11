@@ -26,7 +26,6 @@ add_executable(lqg_crt_gpu
 # Force CUDA compilation for .cpp files that use CUDA headers
 set_source_files_properties(
     src/main.cpp
-    src/crt_cpu.cpp
     PROPERTIES LANGUAGE CUDA
 )
 
