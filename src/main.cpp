@@ -5,6 +5,7 @@
 #include "../include/crt_product_tree.hpp"
 #include "../include/crt_gpu_kernels.cuh"
 #include "../include/crt_host_helpers.hpp"
+#include "../include/crt_cpu.hpp"
 
 #include <unordered_set>
 #include <fstream>
@@ -22,10 +23,7 @@ std::vector<uint32_t> choose_moduli_dynamic(const std::vector<uint32_t>& primes,
                                             int bit_limit,
                                             int* k_dyn);
 
-std::vector<boost::multiprecision::cpp_int> generate_divisors(size_t M,
-                                                              int bits,
-                                                              const std::unordered_set<uint32_t>& mset);
-/*** end forward declarations ***/
+
 
 int main(int argc, char** argv) {
   // Basic device sanity

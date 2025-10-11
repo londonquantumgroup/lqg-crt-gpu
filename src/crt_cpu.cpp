@@ -1,3 +1,4 @@
+#include "../include/crt_cpu.hpp"
 #include "../include/crt_utils.hpp"
 #include "../include/crt_host_helpers.hpp"
 
