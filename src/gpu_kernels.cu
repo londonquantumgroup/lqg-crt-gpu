@@ -1,6 +1,4 @@
-#ifndef CGBN_NO_IMPLEMENTATION
 #define CGBN_NO_IMPLEMENTATION
-#endif
 
 #include "gpu_kernels.cuh"
 
