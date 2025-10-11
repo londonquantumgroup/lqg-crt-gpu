@@ -61,12 +61,8 @@ void run_cgbn_benchmark(
     cgbn_bn_mem_t *d_divs = nullptr, *d_qm = nullptr, *d_rm = nullptr;
     cgbn_error_report_t *report = nullptr;
 
-#ifdef CGBN_ALLOCATE_ERROR_REPORT
-    report = CGBN_ALLOCATE_ERROR_REPORT();
-#else
-    CUDA_CHECK(cudaMallocManaged(&report, sizeof(cgbn_error_report_t)));
-    host_cgbn_error_report_init(report);
-#endif
+    // Use our wrapper function instead of ifdefs
+    cgbn_error_report_alloc_impl(&report);
 
     CUDA_CHECK(cudaMalloc(&d_divs, M * sizeof(cgbn_bn_mem_t)));
     CUDA_CHECK(cudaMalloc(&d_qm,   M * sizeof(cgbn_bn_mem_t)));
@@ -150,11 +146,8 @@ void run_cgbn_benchmark(
     CUDA_CHECK(cudaFree(d_rm));
     CUDA_CHECK(cudaFree(d_N_single));
 
-#ifdef CGBN_FREE_ERROR_REPORT
-    CGBN_FREE_ERROR_REPORT(report);
-#else
-    CUDA_CHECK(cudaFree(report));
-#endif
+    // Use our wrapper function instead of ifdefs
+    cgbn_error_report_free_impl(report);
 
     CUDA_CHECK(cudaEventDestroy(c0));
     CUDA_CHECK(cudaEventDestroy(c1));
