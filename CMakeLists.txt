@@ -1,116 +1,77 @@
-cmake_minimum_required(VERSION 3.20)
-project(lqg_crt_gpu LANGUAGES CXX CUDA)
+cmake_minimum_required(VERSION 3.18)
+project(CRT_Benchmark LANGUAGES CXX CUDA)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
-option(ENABLE_CGBN "Enable CGBN/GMP paths (you must have deps installed)" OFF)
+# Options
+option(NO_CGBN "Build without CGBN support" OFF)
+set(DIVISOR_BITS "128" CACHE STRING "Divisor bit width")
+set(CGBN_BITS "256" CACHE STRING "CGBN bit width")
+set(CGBN_TPI "32" CACHE STRING "CGBN threads per instance")
+set(FAST_REMAINDER_TREE "1" CACHE STRING "Use fast remainder tree")
+set(GPU_GENERATE_DIVISORS "1" CACHE STRING "Generate divisors on GPU")
 
-# You can tweak these to match your GPU
-set(CMAKE_CUDA_ARCHITECTURES 70 75 80 86 89 90)
+# Find packages
+find_package(Boost REQUIRED COMPONENTS system)
+find_package(GMP REQUIRED)
 
-add_library(crt_headers INTERFACE)
-target_include_directories(crt_headers INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
-# Find Boost (header-only multiprecision)
-find_package(Boost REQUIRED)
-
-add_compile_options(-fpermissive)
+# Include directories
+include_directories(
+    ${CMAKE_SOURCE_DIR}/include
+    ${Boost_INCLUDE_DIRS}
+    ${GMP_INCLUDE_DIRS}
+)
 
 # Source files
-set(SOURCES
-  src/main.cpp
-  src/crt_cpu.cpp
-  src/crt_gpu.cu
+set(CPP_SOURCES
+    src/primes.cpp
+    src/modular_arithmetic.cpp
+    src/crt.cpp
+    src/divisors.cpp
 )
 
-# Add CGBN sources if enabled
-if (ENABLE_CGBN)
-  list(APPEND SOURCES 
-    src/crt_cgbn.cu
-    src/crt_cgbn_error.cu
-    src/cgbn_benchmark.cpp
-  )
-endif()
-
-add_executable(lqg_crt_gpu ${SOURCES})
-
-# Force CUDA compilation for certain .cpp files
-set_source_files_properties(
+set(CUDA_SOURCES
+    src/gpu_kernels.cu
     src/main.cpp
-    PROPERTIES LANGUAGE CUDA
 )
 
-if (ENABLE_CGBN)
-  set_source_files_properties(
-      src/cgbn_benchmark.cpp
-      PROPERTIES LANGUAGE CUDA
-  )
-endif()
-
-target_link_libraries(lqg_crt_gpu PRIVATE crt_headers)
-
-# CUDA build properties
-set_target_properties(lqg_crt_gpu PROPERTIES
-  CUDA_SEPARABLE_COMPILATION ON
-  CUDA_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
-  CUDA_RESOLVE_DEVICE_SYMBOLS ON
+# Compile definitions
+add_compile_definitions(
+    DIVISOR_BITS=${DIVISOR_BITS}
+    CGBN_BITS=${CGBN_BITS}
+    CGBN_TPI=${CGBN_TPI}
+    FAST_REMAINDER_TREE=${FAST_REMAINDER_TREE}
+    GPU_GENERATE_DIVISORS=${GPU_GENERATE_DIVISORS}
 )
 
-# DIVISOR_BITS support
-if (NOT DEFINED DIVISOR_BITS)
-  set(DIVISOR_BITS 128)
-endif()
-add_compile_definitions(DIVISOR_BITS=${DIVISOR_BITS})
-message(STATUS "Using DIVISOR_BITS=${DIVISOR_BITS}")
-
-# NVCC & CXX flags
-target_compile_options(lqg_crt_gpu PRIVATE
-  $<$<COMPILE_LANGUAGE:CUDA>:
-    --expt-relaxed-constexpr
-    --use_fast_math
-    -Xptxas=-O3,-v
-  >
-  $<$<COMPILE_LANGUAGE:CXX>:
-    -O3
-  >
-)
-
-# Optional: Enable CGBN/GMP
-if (ENABLE_CGBN)
-  target_compile_definitions(lqg_crt_gpu PRIVATE ENABLE_CGBN=1)
-  
-  find_path(GMP_INCLUDE_DIR NAMES gmpxx.h gmp.h)
-  find_library(GMP_LIB NAMES gmp)
-  find_library(GMPXX_LIB NAMES gmpxx)
-  
-  if (GMP_INCLUDE_DIR AND GMP_LIB AND GMPXX_LIB)
-    target_include_directories(lqg_crt_gpu PRIVATE ${GMP_INCLUDE_DIR})
-    target_link_libraries(lqg_crt_gpu PRIVATE ${GMPXX_LIB} ${GMP_LIB})
-    message(STATUS "CGBN enabled with GMP support")
-  else()
-    message(FATAL_ERROR "ENABLE_CGBN=ON but GMP not found")
-  endif()
-  
-  # Find CGBN headers
-  find_path(CGBN_INCLUDE_DIR 
-    NAMES cgbn/cgbn.h
-    PATHS ${CMAKE_CURRENT_SOURCE_DIR}/include
-          ${CMAKE_CURRENT_SOURCE_DIR}/CGBN/include
-          /usr/local/include
-          /usr/include
-  )
-  
-  if (CGBN_INCLUDE_DIR)
-    target_include_directories(lqg_crt_gpu PRIVATE ${CGBN_INCLUDE_DIR})
-    message(STATUS "Found CGBN at: ${CGBN_INCLUDE_DIR}")
-  else()
-    message(FATAL_ERROR "ENABLE_CGBN=ON but CGBN headers not found. "
-                        "Run: git clone https://github.com/NVlabs/CGBN.git")
-  endif()
+if(NO_CGBN)
+    add_compile_definitions(NO_CGBN)
 else()
-  message(STATUS "CGBN disabled (use -DENABLE_CGBN=ON to enable)")
+    # Add CGBN include path (adjust as needed)
+    include_directories(/path/to/cgbn/include)
 endif()
 
-# Boost headers
-target_include_directories(lqg_crt_gpu PRIVATE ${Boost_INCLUDE_DIRS})
+# Executable
+add_executable(crt_benchmark
+    ${CPP_SOURCES}
+    ${CUDA_SOURCES}
+)
+
+# Set CUDA architecture
+set_property(TARGET crt_benchmark PROPERTY CUDA_ARCHITECTURES 75 80 86)
+
+# Link libraries
+target_link_libraries(crt_benchmark
+    ${Boost_LIBRARIES}
+    ${GMP_LIBRARIES}
+    gmpxx
+)
+
+# Compiler flags
+target_compile_options(crt_benchmark PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-O3 -Wall -Wextra>
+    $<$<COMPILE_LANGUAGE:CUDA>:-O3 --use_fast_math -Xcompiler -Wall>
+)
