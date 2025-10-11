@@ -1,15 +1,18 @@
 cmake_minimum_required(VERSION 3.18)
 project(CRT_Benchmark LANGUAGES CXX CUDA)
 
-# Add module path
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
-
+# ============================================================
+# BASIC SETUP
+# ============================================================
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
-# Options
+# ============================================================
+# OPTIONS
+# ============================================================
 option(NO_CGBN "Build without CGBN support" OFF)
 set(DIVISOR_BITS "128" CACHE STRING "Divisor bit width")
 set(CGBN_BITS "256" CACHE STRING "CGBN bit width")
@@ -18,32 +21,23 @@ set(FAST_REMAINDER_TREE "1" CACHE STRING "Use fast remainder tree")
 set(GPU_GENERATE_DIVISORS "1" CACHE STRING "Generate divisors on GPU")
 set(CGBN_INCLUDE_DIR "" CACHE PATH "Path to CGBN include directory")
 
-# Find packages
+# ============================================================
+# DEPENDENCIES
+# ============================================================
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(GMP REQUIRED)
 find_package(CUDAToolkit REQUIRED)
 include_directories(${CUDAToolkit_INCLUDE_DIRS})
 
-# Include directories
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
     ${Boost_INCLUDE_DIRS}
     ${GMP_INCLUDE_DIRS}
 )
 
-# Source files
-set(CPP_SOURCES
-    src/primes.cpp
-    src/modular_arithmetic.cpp
-    src/crt.cpp
-    src/divisors.cpp
-)
-
-set(CUDA_SOURCES
-    src/gpu_kernels.cu
-)
-
-# CGBN configuration (KEEP AS IS)
+# ============================================================
+# CGBN DETECTION
+# ============================================================
 if(NO_CGBN)
     add_compile_definitions(NO_CGBN)
     message(STATUS "Building WITHOUT CGBN support")
@@ -64,7 +58,6 @@ else()
             "${CMAKE_SOURCE_DIR}/CGBN/include"
             "$ENV{HOME}/cgbn/include"
         )
-        
         foreach(SEARCH_PATH ${CGBN_SEARCH_PATHS})
             if(EXISTS "${SEARCH_PATH}/cgbn/cgbn.h")
                 set(CGBN_INCLUDE_DIR ${SEARCH_PATH})
@@ -73,19 +66,31 @@ else()
                 break()
             endif()
         endforeach()
-        
         if(NOT CGBN_INCLUDE_DIR)
-            message(WARNING "CGBN not found! Set CGBN_INCLUDE_DIR or build with -DNO_CGBN=ON")
-            message(WARNING "Automatically enabling NO_CGBN")
+            message(WARNING "CGBN not found! Building with -DNO_CGBN=ON")
             add_compile_definitions(NO_CGBN)
             set(NO_CGBN ON CACHE BOOL "Build without CGBN support" FORCE)
         endif()
     endif()
 endif()
 
-# -----------------------------------------------
-# Executable target
-# -----------------------------------------------
+# ============================================================
+# SOURCE FILES
+# ============================================================
+set(CPP_SOURCES
+    src/primes.cpp
+    src/modular_arithmetic.cpp
+    src/crt.cpp
+    src/divisors.cpp
+)
+
+set(CUDA_SOURCES
+    src/gpu_kernels.cu
+)
+
+# ============================================================
+# EXECUTABLE
+# ============================================================
 add_executable(crt_benchmark
     ${CPP_SOURCES}
     ${CUDA_SOURCES}
@@ -93,7 +98,9 @@ add_executable(crt_benchmark
     src/cgbn_impl.cu
 )
 
-# ✅ CONFIGURATION DEFINITIONS
+# ============================================================
+# DEFINITIONS
+# ============================================================
 target_compile_definitions(crt_benchmark PRIVATE
     DIVISOR_BITS=${DIVISOR_BITS}
     CGBN_BITS=${CGBN_BITS}
@@ -102,35 +109,44 @@ target_compile_definitions(crt_benchmark PRIVATE
     GPU_GENERATE_DIVISORS=${GPU_GENERATE_DIVISORS}
 )
 
-# ✅ GMP FIX: Force CGBN_USE_GMP onto both compilers
-target_compile_options(crt_benchmark PRIVATE
-    $<$<COMPILE_LANGUAGE:CXX>:-O3 -Wall -Wextra -DCGBN_USE_GMP>
-    $<$<COMPILE_LANGUAGE:CUDA>:-O3 --use_fast_math -DCGBN_USE_GMP -Xcompiler=-Wall,-Wno-class-memaccess,-fpermissive --expt-relaxed-constexpr>
+# --- Critical fix ---
+# Force GMP define only for cgbn_impl.cu so cgbn_cpu.h sees it
+set_source_files_properties(src/cgbn_impl.cu PROPERTIES
+    COMPILE_DEFINITIONS "CGBN_USE_GMP=1"
 )
 
-# Prevent multiple CGBN definitions by defining CGBN_NO_IMPLEMENTATION
+# Disable full CGBN implementation in GPU kernels (header-only mode)
 set_source_files_properties(src/gpu_kernels.cu PROPERTIES
-    COMPILE_DEFINITIONS "CGBN_NO_IMPLEMENTATION" # Removed NO_CGBN and kept only the implementation guard
+    COMPILE_DEFINITIONS "CGBN_NO_IMPLEMENTATION"
 )
 
-# Set CUDA architecture (KEEP AS IS)
+# ============================================================
+# COMPILER / ARCH FLAGS
+# ============================================================
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
     set(CMAKE_CUDA_ARCHITECTURES 75 80 86)
 endif()
 set_property(TARGET crt_benchmark PROPERTY CUDA_ARCHITECTURES ${CMAKE_CUDA_ARCHITECTURES})
-message(STATUS "Target CUDA architectures: ${CMAKE_CUDA_ARCHITECTURES}")
 
-# Link libraries (KEEP AS IS)
+target_compile_options(crt_benchmark PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-O3 -Wall -Wextra>
+    $<$<COMPILE_LANGUAGE:CUDA>:-O3 --use_fast_math -Xcompiler=-Wall,-Wno-class-memaccess,-fpermissive --expt-relaxed-constexpr>
+)
+
+set_property(TARGET crt_benchmark PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+
+# ============================================================
+# LINKING
+# ============================================================
 target_link_libraries(crt_benchmark
     ${Boost_LIBRARIES}
     ${GMP_LIBRARIES}
     gmpxx
 )
 
-# Enable separable compilation (KEEP AS IS)
-set_property(TARGET crt_benchmark PROPERTY CUDA_SEPARABLE_COMPILATION ON)
-
-# Print configuration summary (KEEP AS IS)
+# ============================================================
+# LOG SUMMARY
+# ============================================================
 message(STATUS "")
 message(STATUS "========================================")
 message(STATUS "CRT Benchmark Build Configuration")
