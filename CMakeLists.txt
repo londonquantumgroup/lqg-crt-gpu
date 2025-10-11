@@ -22,6 +22,9 @@ set(CGBN_INCLUDE_DIR "" CACHE PATH "Path to CGBN include directory")
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(GMP REQUIRED)
 
+find_package(CUDAToolkit REQUIRED)
+include_directories(${CUDAToolkit_INCLUDE_DIRS})
+
 # Include directories
 include_directories(
     ${CMAKE_SOURCE_DIR}/include
