@@ -1,5 +1,14 @@
+#pragma once
+#ifndef CGBN_NO_IMPLEMENTATION
 #define CGBN_NO_IMPLEMENTATION
+#endif
+
 #include "gpu_kernels.cuh"
+
+// Device helper functions...
+__device__ __forceinline__ u32 mul_mod_u32(u32 a, u32 b, u32 mod) {
+    ...
+
 
 __device__ __forceinline__ u32 mul_mod_u32(u32 a, u32 b, u32 mod) {
     unsigned long long prod = (unsigned long long)a * (unsigned long long)b;
