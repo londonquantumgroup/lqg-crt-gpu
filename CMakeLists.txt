@@ -117,7 +117,6 @@ add_executable(crt_benchmark
     ${CPP_SOURCES}
     ${CUDA_SOURCES}
     src/main.cu
-    src/cgbn_impl.cu
 )
 
 # ============================================================
@@ -129,26 +128,6 @@ target_compile_definitions(crt_benchmark PRIVATE
     CGBN_TPI=${CGBN_TPI}
     FAST_REMAINDER_TREE=${FAST_REMAINDER_TREE}
     GPU_GENERATE_DIVISORS=${GPU_GENERATE_DIVISORS}
-)
-
-# ============================================================
-# CRITICAL FIX: Set CGBN_NO_IMPLEMENTATION for .cu files
-# Use target_compile_options with generator expressions for proper isolation
-# ============================================================
-
-# For gpu_kernels.cu and main.cu: prevent CGBN implementation
-set_source_files_properties(
-    src/gpu_kernels.cu 
-    src/main.cu
-    PROPERTIES 
-    COMPILE_OPTIONS "$<$<COMPILE_LANGUAGE:CUDA>:-DCGBN_NO_IMPLEMENTATION>"
-)
-
-# Only cgbn_impl.cu gets the full CGBN implementation
-set_source_files_properties(
-    src/cgbn_impl.cu 
-    PROPERTIES 
-    COMPILE_OPTIONS "$<$<COMPILE_LANGUAGE:CUDA>:-DCGBN_USE_GMP=1>"
 )
 
 # ============================================================
@@ -171,8 +150,9 @@ set_property(TARGET crt_benchmark PROPERTY CUDA_SEPARABLE_COMPILATION OFF)
 # ============================================================
 target_link_libraries(crt_benchmark
     ${Boost_LIBRARIES}
-    ${GMP_LIBRARIES}
+    gmp
     gmpxx
+    CUDA::cudart
 )
 
 # ============================================================

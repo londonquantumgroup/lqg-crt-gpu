@@ -1,5 +1,10 @@
-// cgbn_utils.hpp now handles all CGBN includes with proper defines
-#include "gpu_kernels.cuh"
+#include "types.hpp"
+
+// Only include CGBN if not disabled
+#ifndef NO_CGBN
+#include "cgbn_utils.hpp"
+#endif
+
 #include <stdint.h>
 
 __device__ __forceinline__ u32 mul_mod_u32(u32 a, u32 b, u32 mod) {
