@@ -28,6 +28,7 @@ set(SOURCES
 if (ENABLE_CGBN)
   list(APPEND SOURCES 
     src/crt_cgbn.cu
+    src/crt_cgbn_error.cu
     src/cgbn_benchmark.cpp
   )
 endif()
