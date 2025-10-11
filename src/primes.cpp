@@ -1,4 +1,5 @@
 #include "primes.hpp"
+#include <cstdint>  // Add this line
 
 std::vector<u32> sieve_primes(u32 limit) {
     std::vector<char> is(limit + 1, true);
