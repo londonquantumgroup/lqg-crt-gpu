@@ -1,4 +1,5 @@
 #define CGBN_NO_IMPLEMENTATION
+#define CGBN_NO_IMPLEMENTATION
 #include "types.hpp"
 #include "timing.hpp"
 #include "bigint_utils.hpp"

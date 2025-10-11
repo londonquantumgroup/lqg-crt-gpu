@@ -131,14 +131,20 @@ target_compile_definitions(crt_benchmark PRIVATE
     GPU_GENERATE_DIVISORS=${GPU_GENERATE_DIVISORS}
 )
 
-# --- Critical fix: enable GMP backend in CGBN implementation only ---
-set_source_files_properties(src/cgbn_impl.cu PROPERTIES
-    COMPILE_FLAGS "-DCGBN_USE_GMP=1"
+# ============================================================
+# CRITICAL FIX: Set CGBN_NO_IMPLEMENTATION for all .cu files
+# except cgbn_impl.cu (which contains the actual implementation)
+# ============================================================
+set_source_files_properties(
+    src/gpu_kernels.cu
+    src/main.cu
+    PROPERTIES
+    COMPILE_DEFINITIONS "CGBN_NO_IMPLEMENTATION"
 )
 
-# Disable full implementation in GPU kernels (header-only mode)
-set_source_files_properties(src/gpu_kernels.cu PROPERTIES
-    COMPILE_DEFINITIONS "CGBN_NO_IMPLEMENTATION"
+# Only cgbn_impl.cu gets the GMP backend enabled
+set_source_files_properties(src/cgbn_impl.cu PROPERTIES
+    COMPILE_FLAGS "-DCGBN_USE_GMP=1"
 )
 
 # ============================================================
