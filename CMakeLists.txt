@@ -94,10 +94,16 @@ else()
 endif()
 
 # Executable
+
 add_executable(crt_benchmark
     ${CPP_SOURCES}
     ${CUDA_SOURCES}
     src/main.cu
+)
+
+# Prevent multiple CGBN definitions by defining CGBN_NO_IMPLEMENTATION only for main.cu
+set_source_files_properties(src/main.cu PROPERTIES
+    COMPILE_DEFINITIONS "CGBN_NO_IMPLEMENTATION"
 )
 
 
