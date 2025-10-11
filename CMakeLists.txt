@@ -43,7 +43,7 @@ set(CUDA_SOURCES
     src/gpu_kernels.cu
 )
 
-# CGBN configuration
+# CGBN configuration (KEEP AS IS)
 if(NO_CGBN)
     add_compile_definitions(NO_CGBN)
     message(STATUS "Building WITHOUT CGBN support")
@@ -93,9 +93,8 @@ add_executable(crt_benchmark
     src/cgbn_impl.cu
 )
 
-# ✅ Force CGBN_USE_GMP for both host and CUDA compilation
+# ✅ CONFIGURATION DEFINITIONS
 target_compile_definitions(crt_benchmark PRIVATE
-    CGBN_USE_GMP=1
     DIVISOR_BITS=${DIVISOR_BITS}
     CGBN_BITS=${CGBN_BITS}
     CGBN_TPI=${CGBN_TPI}
@@ -103,35 +102,35 @@ target_compile_definitions(crt_benchmark PRIVATE
     GPU_GENERATE_DIVISORS=${GPU_GENERATE_DIVISORS}
 )
 
-# Prevent multiple CGBN definitions by defining CGBN_NO_IMPLEMENTATION
-set_source_files_properties(src/gpu_kernels.cu PROPERTIES
-    COMPILE_DEFINITIONS "NO_CGBN;CGBN_NO_IMPLEMENTATION"
+# ✅ GMP FIX: Force CGBN_USE_GMP onto both compilers
+target_compile_options(crt_benchmark PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-O3 -Wall -Wextra -DCGBN_USE_GMP>
+    $<$<COMPILE_LANGUAGE:CUDA>:-O3 --use_fast_math -DCGBN_USE_GMP -Xcompiler=-Wall,-Wno-class-memaccess,-fpermissive --expt-relaxed-constexpr>
 )
 
-# Set CUDA architecture
+# Prevent multiple CGBN definitions by defining CGBN_NO_IMPLEMENTATION
+set_source_files_properties(src/gpu_kernels.cu PROPERTIES
+    COMPILE_DEFINITIONS "CGBN_NO_IMPLEMENTATION" # Removed NO_CGBN and kept only the implementation guard
+)
+
+# Set CUDA architecture (KEEP AS IS)
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
     set(CMAKE_CUDA_ARCHITECTURES 75 80 86)
 endif()
 set_property(TARGET crt_benchmark PROPERTY CUDA_ARCHITECTURES ${CMAKE_CUDA_ARCHITECTURES})
 message(STATUS "Target CUDA architectures: ${CMAKE_CUDA_ARCHITECTURES}")
 
-# Link libraries
+# Link libraries (KEEP AS IS)
 target_link_libraries(crt_benchmark
     ${Boost_LIBRARIES}
     ${GMP_LIBRARIES}
     gmpxx
 )
 
-# Compiler flags
-target_compile_options(crt_benchmark PRIVATE
-    $<$<COMPILE_LANGUAGE:CXX>:-O3 -Wall -Wextra>
-    $<$<COMPILE_LANGUAGE:CUDA>:-O3 --use_fast_math -Xcompiler=-Wall,-Wno-class-memaccess,-fpermissive --expt-relaxed-constexpr>
-)
-
-# Enable separable compilation
+# Enable separable compilation (KEEP AS IS)
 set_property(TARGET crt_benchmark PROPERTY CUDA_SEPARABLE_COMPILATION ON)
 
-# Print configuration summary
+# Print configuration summary (KEEP AS IS)
 message(STATUS "")
 message(STATUS "========================================")
 message(STATUS "CRT Benchmark Build Configuration")
