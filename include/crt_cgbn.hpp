@@ -36,11 +36,11 @@ static inline cpp_int cgbn_mem_to_cppint(const cgbn_bn_mem_t &x) {
     return result;
 }
 
-// Initialize CGBN error report
-static inline void host_cgbn_error_report_init(cgbn_error_report_t *report) {
-    if (report) {
-        memset(report, 0, sizeof(cgbn_error_report_t));
-    }
-}
+// Forward declare error report functions that will be defined once in crt_cgbn.cu
+void cgbn_error_report_alloc_impl(cgbn_error_report_t **report);
+void cgbn_error_report_free_impl(cgbn_error_report_t *report);
+void cgbn_error_report_check_impl(cgbn_error_report_t *report);
+void cgbn_error_report_reset_impl(cgbn_error_report_t *report);
+const char* cgbn_error_string_impl(cgbn_error_report_t *report);
 
 #endif // ENABLE_CGBN
