@@ -6,10 +6,9 @@
 #include <gmpxx.h>
 #define CGBN_USE_GMP 1
 
-// --- Fix: prevent CGBN error-report symbols from being defined in multiple .cu files ---
-#ifndef CGBN_NO_IMPLEMENTATION
-#define CGBN_NO_IMPLEMENTATION
-#endif
+// CRITICAL: The CGBN_NO_IMPLEMENTATION flag is now controlled by CMake
+// and passed as a compiler flag. We should NOT redefine it here.
+// Only cgbn_impl.cu will have the full implementation.
 
 #include <cgbn/cgbn.h>
 #include <boost/multiprecision/cpp_int.hpp>
