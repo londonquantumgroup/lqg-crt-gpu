@@ -1,3 +1,4 @@
+#define CGBN_NO_IMPLEMENTATION
 #include "gpu_kernels.cuh"
 
 __device__ __forceinline__ u32 mul_mod_u32(u32 a, u32 b, u32 mod) {
