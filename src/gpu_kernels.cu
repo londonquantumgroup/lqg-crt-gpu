@@ -1,21 +1,6 @@
-// Include CGBN first with proper defines
-#ifndef NO_CGBN
-#define CGBN_USE_GMP 1
-// CGBN_NO_IMPLEMENTATION is set by CMake compiler flags
-#include <cgbn/cgbn.h>
-#endif
-
+// cgbn_utils.hpp now handles all CGBN includes with proper defines
 #include "gpu_kernels.cuh"
-#include "cgbn_utils.hpp"
 #include <stdint.h>
-
-#ifndef NO_CGBN
-// Define CGBN types here
-typedef cgbn_context_t<CGBN_TPI>               cgbn_context;
-typedef cgbn_env_t<cgbn_context, CGBN_BITS>    cgbn_env;
-typedef cgbn_env::cgbn_t                       cgbn_bn_t;
-typedef cgbn_mem_t<CGBN_BITS>                  cgbn_bn_mem_t;
-#endif
 
 __device__ __forceinline__ u32 mul_mod_u32(u32 a, u32 b, u32 mod) {
     unsigned long long prod = (unsigned long long)a * (unsigned long long)b;
