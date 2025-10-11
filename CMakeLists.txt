@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.18)
 project(CRT_Benchmark LANGUAGES CXX CUDA)
 
+# Add module path
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -26,7 +29,7 @@ include_directories(
     ${GMP_INCLUDE_DIRS}
 )
 
-# Source files
+# Source files - SEPARATE C++ and CUDA
 set(CPP_SOURCES
     src/primes.cpp
     src/modular_arithmetic.cpp
@@ -36,7 +39,6 @@ set(CPP_SOURCES
 
 set(CUDA_SOURCES
     src/gpu_kernels.cu
-    src/main.cpp
 )
 
 # Compile definitions
@@ -53,7 +55,6 @@ if(NO_CGBN)
     add_compile_definitions(NO_CGBN)
     message(STATUS "Building WITHOUT CGBN support")
 else()
-    # Try to find CGBN
     if(CGBN_INCLUDE_DIR)
         if(EXISTS "${CGBN_INCLUDE_DIR}/cgbn/cgbn.h")
             include_directories(${CGBN_INCLUDE_DIR})
@@ -62,12 +63,13 @@ else()
             message(FATAL_ERROR "CGBN_INCLUDE_DIR specified but cgbn.h not found at ${CGBN_INCLUDE_DIR}/cgbn/cgbn.h")
         endif()
     else()
-        # Try common locations
         set(CGBN_SEARCH_PATHS
-            "/content/cgbn/include"           # Google Colab
-            "/usr/local/include"              # System-wide
-            "${CMAKE_SOURCE_DIR}/../cgbn/include"  # Adjacent to project
-            "$ENV{HOME}/cgbn/include"         # User home
+            "/content/cgbn/include"
+            "/content/lqg-crt-gpu/CGBN/include"
+            "/usr/local/include"
+            "${CMAKE_SOURCE_DIR}/../cgbn/include"
+            "${CMAKE_SOURCE_DIR}/CGBN/include"
+            "$ENV{HOME}/cgbn/include"
         )
         
         foreach(SEARCH_PATH ${CGBN_SEARCH_PATHS})
@@ -88,13 +90,17 @@ else()
     endif()
 endif()
 
-# Executable
+# Executable - src/main.cpp is CUDA file
 add_executable(crt_benchmark
     ${CPP_SOURCES}
     ${CUDA_SOURCES}
+    src/main.cpp  # This is treated as CUDA
 )
 
-# Set CUDA architecture - make configurable
+# Mark main.cpp as CUDA
+set_source_files_properties(src/main.cpp PROPERTIES LANGUAGE CUDA)
+
+# Set CUDA architecture
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
     set(CMAKE_CUDA_ARCHITECTURES 75 80 86)
 endif()
@@ -112,7 +118,7 @@ target_link_libraries(crt_benchmark
 # Compiler flags
 target_compile_options(crt_benchmark PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-O3 -Wall -Wextra>
-    $<$<COMPILE_LANGUAGE:CUDA>:-O3 --use_fast_math -Xcompiler -Wall>
+    $<$<COMPILE_LANGUAGE:CUDA>:-O3 --use_fast_math -Xcompiler=-Wall>
 )
 
 # Print configuration summary
