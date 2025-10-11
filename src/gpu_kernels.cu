@@ -1,5 +1,3 @@
-#define CGBN_NO_IMPLEMENTATION
-
 #include "gpu_kernels.cuh"
 #include <stdint.h>
 
