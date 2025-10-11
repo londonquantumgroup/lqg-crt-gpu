@@ -164,7 +164,7 @@ target_compile_options(crt_benchmark PRIVATE
     $<$<COMPILE_LANGUAGE:CUDA>:-O3 --use_fast_math -Xcompiler=-Wall,-Wno-class-memaccess,-fpermissive --expt-relaxed-constexpr>
 )
 
-set_property(TARGET crt_benchmark PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+set_property(TARGET crt_benchmark PROPERTY CUDA_SEPARABLE_COMPILATION OFF)
 
 # ============================================================
 # LINKING
