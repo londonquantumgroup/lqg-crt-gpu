@@ -1,11 +1,5 @@
 #include "gpu_kernels.cuh"
 #include "types.hpp"
-
-// Only include CGBN if not disabled
-#ifndef NO_CGBN
-#include "cgbn_utils.hpp"
-#endif
-
 #include <stdint.h>
 
 __device__ __forceinline__ u32 mul_mod_u32(u32 a, u32 b, u32 mod) {
@@ -103,31 +97,4 @@ __global__ void remainders_via_crt_64(const u64* __restrict__ P,
     out[idx] = rem;
 }
 
-#ifndef NO_CGBN
-__global__ void cgbn_divrem_kernel(cgbn_error_report_t *report,
-                                   const cgbn_bn_mem_t *d_N_single,
-                                   cgbn_bn_mem_t *divs,
-                                   cgbn_bn_mem_t *qouts,
-                                   cgbn_bn_mem_t *routs,
-                                   int count)
-{
-    cgbn_context ctx(cgbn_no_checks, report, 0);
-    cgbn_env env(ctx);
-    int instance = (blockIdx.x * blockDim.x + threadIdx.x) / CGBN_TPI;
-    if (instance >= count) return;
-    
-    cgbn_bn_t n, d, q, r;
-    cgbn_load(env, n, (cgbn_bn_mem_t*)d_N_single);
-    cgbn_load(env, d, &divs[instance]);
-    
-    if (cgbn_compare_ui32(env, d, 0) == 0) {
-        cgbn_set_ui32(env, q, 0);
-        cgbn_set_ui32(env, r, 0);
-    } else {
-        cgbn_div_rem(env, q, r, n, d);
-    }
-    
-    cgbn_store(env, &qouts[instance], q);
-    cgbn_store(env, &routs[instance], r);
-}
-#endif
+// NO CGBN CODE HERE - it's in main.cu
