@@ -22,6 +22,17 @@ set(GPU_GENERATE_DIVISORS "1" CACHE STRING "Generate divisors on GPU")
 set(CGBN_INCLUDE_DIR "" CACHE PATH "Path to CGBN include directory")
 
 # ============================================================
+# 🔧 GLOBAL DEFINITIONS (MUST come before any includes)
+# ============================================================
+add_compile_definitions(
+  DIVISOR_BITS=${DIVISOR_BITS}
+  CGBN_BITS=${CGBN_BITS}
+  CGBN_TPI=${CGBN_TPI}
+  FAST_REMAINDER_TREE=${FAST_REMAINDER_TREE}
+  GPU_GENERATE_DIVISORS=${GPU_GENERATE_DIVISORS}
+)
+
+# ============================================================
 # CREATE FindGMP.cmake BEFORE CALLING find_package(GMP)
 # ============================================================
 file(MAKE_DIRECTORY "${CMAKE_SOURCE_DIR}/cmake")
@@ -120,17 +131,6 @@ add_executable(crt_benchmark
 )
 
 # ============================================================
-# DEFINITIONS
-# ============================================================
-target_compile_definitions(crt_benchmark PRIVATE
-    DIVISOR_BITS=${DIVISOR_BITS}
-    CGBN_BITS=${CGBN_BITS}
-    CGBN_TPI=${CGBN_TPI}
-    FAST_REMAINDER_TREE=${FAST_REMAINDER_TREE}
-    GPU_GENERATE_DIVISORS=${GPU_GENERATE_DIVISORS}
-)
-
-# ============================================================
 # COMPILER / ARCH FLAGS
 # ============================================================
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
@@ -140,7 +140,7 @@ set_property(TARGET crt_benchmark PROPERTY CUDA_ARCHITECTURES ${CMAKE_CUDA_ARCHI
 
 target_compile_options(crt_benchmark PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-O3 -Wall -Wextra>
-    $<$<COMPILE_LANGUAGE:CUDA>:-O3 --use_fast_math -Xcompiler=-Wall,-Wno-class-memaccess,-fpermissive --expt-relaxed-constexpr>
+    $<$<COMPILE_LANGUAGE:CUDA>:-O3 --use_fast_math -Xcompiler=-Wall,-Wno-class-memaccess,-fpermissive --expt-relaxed-constexpr --maxrregcount=64 -Xptxas=-v>
 )
 
 set_property(TARGET crt_benchmark PROPERTY CUDA_SEPARABLE_COMPILATION OFF)
