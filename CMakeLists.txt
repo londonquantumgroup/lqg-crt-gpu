@@ -128,6 +128,7 @@ add_executable(crt_benchmark
     ${CPP_SOURCES}
     ${CUDA_SOURCES}
     src/main.cu
+    src/warmup.cu  
 )
 
 # ============================================================
