@@ -223,6 +223,7 @@ void run_crt_benchmark_32(int M, const cpp_int& N,
         CUDA_CHECK(cudaMemcpy(gpu_chunk.data(), d_out_chunk, 
                              chunk * sizeof(u32), cudaMemcpyDeviceToHost));
         results.d2h_chunks_ms += ms_since(t_d2h_start);
+        results.total_gpu_ms += d2h_time; 
         CUDA_CHECK(cudaDeviceSynchronize());
         
         CUDA_CHECK(cudaEventDestroy(t0));
@@ -318,6 +319,7 @@ void run_crt_benchmark_64(int M, const cpp_int& N,
         CUDA_CHECK(cudaMemcpy(gpu_chunk.data(), d_out_chunk, 
                              chunk * sizeof(u64), cudaMemcpyDeviceToHost));
         results.d2h_chunks_ms += ms_since(t_d2h_start);
+        results.total_gpu_ms += d2h_time;
         CUDA_CHECK(cudaDeviceSynchronize());
         
         CUDA_CHECK(cudaEventDestroy(t0));
