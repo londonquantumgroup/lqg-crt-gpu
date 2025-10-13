@@ -502,7 +502,7 @@ void run_cgbn_benchmark(int M, const cpp_int& N,
     printf("CGBN div_rem | %d divisions | %.3f ms (%.2f M/s) | mismatches=%d\n", 
            M, cgbn_divrem_ms, cgbn_mps, mism_cgbn);
     
-    double cgbn_full_ms = cgbn_h2d_ms + cgbn_launch_ms + cgbn_d2h_ms;
+    double cgbn_full_ms = cgbn_h2d_ms + (double)cgbn_divrem_ms + cgbn_d2h_ms;
     double cgbn_full_mps = (cgbn_full_ms > 0.0) ? 
                           ((M / 1e6) / (cgbn_full_ms / 1000.0)) : 0.0;
     printf("CGBN div_rem full | %d divisions | %.3f ms (%.2f M/s) | "
