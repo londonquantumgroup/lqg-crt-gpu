@@ -6,6 +6,7 @@
 #include "divisors.hpp"
 #include "cuda_utils.hpp"
 #include "gpu_kernels.cuh"
+#include "warmup.cuh"
 
 #ifndef NO_CGBN
 #include "cgbn_utils.hpp"
@@ -37,23 +38,6 @@ void print_usage(const char* prog_name) {
     fprintf(stderr, "CGBN_BITS=%d (compile with -DCGBN_BITS=X for larger numbers)\n", CGBN_BITS);
 }
 
-void warmup_gpu() {
-    auto t_warm_start = now_tp();
-    cudaFree(0);
-    cudaDeviceSynchronize();
-    
-#ifdef FAST_REMAINDER_TREE
-    dim3 warm_blocks(1);
-    dim3 warm_threads(1);
-    remainders_via_crt_32<<<warm_blocks, warm_threads>>>(
-        (u32*)nullptr, (u32*)nullptr, 0,
-        (u32*)nullptr, (u32*)nullptr, 0);
-    cudaDeviceSynchronize();
-#endif
-    
-    double warmup_ms = ms_since(t_warm_start);
-    printf("[warmup] GPU context + JIT ready in %.2f ms (excluded from setup)\n\n", warmup_ms);
-}
 
 void check_gpu_capability() {
     int device;
@@ -545,7 +529,7 @@ int main(int argc, char** argv) {
     check_gpu_capability();
     printf("=== CRT GPU with %d-bit divisors ===\n", DIVISOR_BITS);
     
-    warmup_gpu();
+    warmup_gpu_context();
     
     const u64 BASE_SEED_64 = 1234567ull;
     const u32 BASE_SEED_32 = (u32)BASE_SEED_64;
@@ -613,6 +597,12 @@ int main(int argc, char** argv) {
     printf("choose=%.2fms residues=%.2fms garner=%.2fms h2d_static=%.2fms | total=%.2fms\n",
            setup.choose_ms, setup.residues_ms, setup.garner_ms, 
            crt_data.h2d_ms, total_setup_ms);
+    printf("\n");
+    if (DIVISOR_BITS == 32) {
+        warmup_crt_kernel_32(crt_data.d_c, crt_data.d_m, setup.k_used);
+    } else if (DIVISOR_BITS == 64) {
+        warmup_crt_kernel_64(crt_data.d_c, crt_data.d_m, setup.k_used);
+    }
     
 #ifndef NO_CGBN
     cgbn_bn_mem_t N_mem;
