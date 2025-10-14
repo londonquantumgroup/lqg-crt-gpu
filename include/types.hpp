@@ -4,7 +4,7 @@ using u64  = unsigned long long;
 using u128 = unsigned __int128;
 using u32  = unsigned int;
 
-#define MAX_K 128
+
 
 #ifndef FAST_REMAINDER_TREE
 #define FAST_REMAINDER_TREE 1
