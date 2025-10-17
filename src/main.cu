@@ -437,7 +437,7 @@ CUDA_CHECK(cudaEventRecord(c0));
 
     CUDA_CHECK(cudaEventRecord(c1));
     CUDA_CHECK(cudaEventSynchronize(c1));
-    CUDA_CHECK(cudaDeviceSynchronize())
+    CUDA_CHECK(cudaDeviceSynchronize());
 
     double cgbn_launch_ms = ms_since(t_launch_start);
     float cgbn_divrem_ms = 0.f;
