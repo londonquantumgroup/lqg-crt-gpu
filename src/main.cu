@@ -528,11 +528,6 @@ int main(int argc, char** argv) {
     printf("[Setup] Loading Garner table: %s (k=%d)\n", table_file.c_str(), required_k);
     GarnerTable G = load_garner_table(table_file, required_k);
 
-        printf("[Debug] G.primes first 10: ");
-    for (int i = 0; i < 10 && i < (int)G.primes.size(); i++) {
-        printf("%u ", G.primes[i]);
-    }
-    printf("\n");
 
     printf("[Debug] global_primes last 10: ");
     for (int i = global_primes.size() - 10; i < global_primes.size(); i++) {
