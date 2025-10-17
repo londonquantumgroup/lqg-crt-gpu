@@ -144,7 +144,6 @@ std::vector<u32> choose_moduli_dynamic(const std::vector<u32>& primes,
     return m;
 }
 
-// --- Garner reconstruction using O(k^2) Basis Transformation ---
 std::vector<u64> garner_from_residues(const std::vector<u64>& r,
     const std::vector<u64>& m) {
     const size_t k = m.size();
@@ -159,12 +158,9 @@ std::vector<u64> garner_from_residues(const std::vector<u64>& r,
     std::vector<u64> c(k); // Mixed-radix coefficients
 
     for (size_t i = 0; i < k; ++i) {
-        // V_i is the current remaining residue, initially r_i mod m_i
         u64 V_i = r[i] % m[i];
 
         // --- Inner loop: Basis Transformation (O(1) per step) ---
-        // This loop iteratively removes the contribution of all previous
-        // coefficients c_j by multiplying by the precomputed inverse G[j][i].
         for (size_t j = 0; j < i; ++j) {
 
             // 1. Subtract the already-solved coefficient c_j (mod m_i)
@@ -175,9 +171,9 @@ std::vector<u64> garner_from_residues(const std::vector<u64>& r,
                   (V_i - cj_mod) : 
                   (V_i + m[i] - cj_mod);
 
-            // 2. Multiply V_i by the precomputed inverse M_j^{-1} mod m_i
-            // Index: j * k + i
-            u64 inv_ji = G.inv_flat[j * k + i]; 
+            // 2. Multiply V_i by the precomputed inverse M_{j+1}^{-1} mod m_i
+            // The index must be (j + 1) to get the inverse of the NEXT basis product.
+            u64 inv_ji = G.inv_flat[(j + 1) * k + i]; // 👈 FIX IS HERE
             
             V_i = (u64)(((__uint128_t)V_i * (__uint128_t)inv_ji) % (__uint128_t)m[i]);
         }
@@ -187,4 +183,5 @@ std::vector<u64> garner_from_residues(const std::vector<u64>& r,
     }
 
     return c;
+};
 }
