@@ -153,7 +153,7 @@ esac
 
 echo ""
 echo -e "${GREEN}=========================================="
-echo "✅ Download complete!"
+echo "✅ Download scomplete!"
 echo -e "==========================================${NC}"
 echo "Files are ready to use in the data/ directory."
 echo ""
