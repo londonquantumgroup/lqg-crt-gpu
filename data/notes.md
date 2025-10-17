@@ -28,13 +28,13 @@ Or download directly:
 cd data
 
 # 10k table (800 MB)
-wget https://your-bucket-name.s3.amazonaws.com/garner-tables/v1.0.0/garner_k10k.bin
+wget https://lqg-crt-inverse-matrix-data.s3.eu-north-1.amazonaws.com/garner_k10k.bin
 
 # 20k table (3.2 GB)
-wget https://your-bucket-name.s3.amazonaws.com/garner-tables/v1.0.0/garner_k20k.bin
+wget https://lqg-crt-inverse-matrix-data.s3.eu-north-1.amazonaws.com/garner_k20k.bin
 
 # 40k table (12.8 GB)
-wget https://your-bucket-name.s3.amazonaws.com/garner-tables/v1.0.0/garner_k40k.bin
+wget https://lqg-crt-inverse-matrix-data.s3.eu-north-1.amazonaws.com/garner_k40k.bin
 ```
 
 ## Storage Requirements

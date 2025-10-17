@@ -5,16 +5,16 @@ set -e
 # Garner Table Downloader
 # ========================================
 
-# Configuration - UPDATE THESE WITH YOUR ACTUAL S3 URLs
-BUCKET_NAME="your-bucket-name"
-REGION="us-east-1"  # Change to your region
-VERSION="v1.0.0"
+# Configuration
+BUCKET_NAME="lqg-crt-inverse-matrix-data"
+REGION="eu-north-1"
 
-# Construct base URL
+# Construct base URL - removed the VERSION variable and garner-tables/ prefix
+# since your files are directly in the bucket root
 if [ "$REGION" = "us-east-1" ]; then
-    BASE_URL="https://${BUCKET_NAME}.s3.amazonaws.com/garner-tables/${VERSION}"
+    BASE_URL="https://${BUCKET_NAME}.s3.amazonaws.com"
 else
-    BASE_URL="https://${BUCKET_NAME}.s3.${REGION}.amazonaws.com/garner-tables/${VERSION}"
+    BASE_URL="https://${BUCKET_NAME}.s3.${REGION}.amazonaws.com"
 fi
 
 # Color codes
@@ -158,3 +158,5 @@ echo -e "==========================================${NC}"
 echo "Files are ready to use in the data/ directory."
 echo ""
 echo "You can now run benchmarks requiring these tables."
+```
+
