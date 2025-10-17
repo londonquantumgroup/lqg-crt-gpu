@@ -585,7 +585,7 @@ int main(int argc, char** argv) {
     }
     
     cpp_int N = read_big_decimal(Ns);
-    const int SAFETY_BITS = 32;
+    const int SAFETY_BITS = 128;
     
     // Perform CRT setup
     SetupData setup = perform_crt_setup(N, k, SAFETY_BITS);
