@@ -3,7 +3,7 @@
 
 std::vector<u32> sieve_primes(u32 limit) {
     std::vector<char> is(limit + 1, true);
-    const u32 SIEVE_MAX = 50000000u;
+    const u32 SIEVE_MAX = 200000000u;
     if (limit > SIEVE_MAX) limit = SIEVE_MAX;
     
     is[0] = false;
