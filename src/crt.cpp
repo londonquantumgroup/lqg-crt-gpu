@@ -5,6 +5,9 @@
 #include <stdexcept>
 #include <fstream>
 #include <iostream>
+#include <vector>
+#include <cstdio> // Needed for printf if any are left/needed
+
 
 GarnerTable load_garner_table(const std::string& filename, int required_k) {
     std::ifstream f(filename, std::ios::binary);
@@ -26,11 +29,7 @@ GarnerTable load_garner_table(const std::string& filename, int required_k) {
     G.primes.resize(required_k);
     f.read(reinterpret_cast<char*>(G.primes.data()), required_k * sizeof(uint32_t));
 
-    std::cout << "[Garner] First 10 primes from table: ";
-    for (int i = 0; i < 10 && i < required_k; i++) {
-        std::cout << G.primes[i] << " ";
-    }
-    std::cout << std::endl;
+    // REMOVED: std::cout << "[Garner] First 10 primes from table: ..."
 
     // Read flattened inverse matrix
     f.seekg(h.inv_table_offset);
@@ -61,13 +60,8 @@ GarnerTable load_garner_table(const std::string& filename, int required_k) {
     std::cout << "[Garner] Loaded " << required_k << "×" << required_k
               << " inverse matrix from " << filename << std::endl;
 
-    // DEBUG: Print first few diagonal elements
-    std::cout << "[Garner] First 5 diagonal inverses: ";
-    for (int i = 0; i < 5 && i < required_k; i++) {
-        std::cout << G.inv_flat[i * required_k + i] << " ";
-    }
-    std::cout << std::endl;
-
+    // REMOVED: DEBUG: Print first few diagonal elements
+    
     return G;
 }
 
@@ -138,18 +132,9 @@ void remainder_tree_down(const CRTProductTree &T, const cpp_int &N,
 std::vector<u32> choose_moduli_dynamic(const std::vector<u32>& primes,
     const cpp_int& N, int safety_bits,
     int* out_k) {
- // ADD THIS DEBUG
- printf("[choose_moduli_dynamic] Called with %zu primes\n", primes.size());
- printf("[choose_moduli_dynamic] First 10 primes: ");
- for (int i = 0; i < 10 && i < (int)primes.size(); i++) {
-     printf("%u ", primes[i]);
- }
- printf("\n");
- printf("[choose_moduli_dynamic] Last 10 primes: ");
- for (int i = std::max(0, (int)primes.size() - 10); i < (int)primes.size(); i++) {
-     printf("%u ", primes[i]);
- }
- printf("\n");
+ 
+// REMOVED: printf("[choose_moduli_dynamic] Called with ...") and all related prints
+
 size_t nbits = bitlen_cppint(N);
 double target_bits = (double)nbits + (double)safety_bits;
 
@@ -178,11 +163,7 @@ std::vector<u64> garner_from_residues(const std::vector<u64>& r,
         throw std::runtime_error("garner: size mismatch");
     }
 
-    // ADD THIS DEBUG
-    printf("[garner_from_residues] k=%zu, G.max_k=%u, G.inv_flat.size()=%zu\n", 
-           k, G.max_k, G.inv_flat.size());
-    printf("[garner_from_residues] Expected inv_flat size for k=%zu: %zu\n", 
-           k, k * k);
+    // REMOVED: DEBUG prints for k, G.max_k, etc.
     
     std::vector<u64> a(k);
     a[0] = r[0] % m[0];
@@ -208,33 +189,18 @@ std::vector<u64> garner_from_residues(const std::vector<u64>& r,
             diff = rj_mod + m[j] - sum;
         }
         
-        // ADD THIS DEBUG FOR FIRST FEW ITERATIONS
-        if (j < 3) {
-            size_t idx = j * G.max_k + j;
-            printf("[garner j=%zu] Accessing G.inv_flat[%zu], m[j]=%llu, prod=%llu, diff=%llu\n",
-                   j, idx, (unsigned long long)m[j], (unsigned long long)prod, (unsigned long long)diff);
-        }
+        // REMOVED: DEBUG prints for first few iterations
         
         u64 inv_jj = G.inv_flat[j * G.max_k + j];
         
-        if (j < 3) {
-            printf("[garner j=%zu] inv_jj=%llu, computing a[j]...\n", 
-                   j, (unsigned long long)inv_jj);
-        }
+        // REMOVED: DEBUG prints
         
         a[j] = (u64)(((__uint128_t)diff * (__uint128_t)inv_jj) % (__uint128_t)m[j]);
         
-        if (j < 3) {
-            printf("[garner j=%zu] a[j]=%llu\n", j, (unsigned long long)a[j]);
-        }
+        // REMOVED: DEBUG prints
     }
 
-    // ADD THIS
-    printf("[garner_from_residues] First 5 coefficients: ");
-    for (size_t i = 0; i < 5 && i < k; i++) {
-        printf("%llu ", (unsigned long long)a[i]);
-    }
-    printf("\n");
+    // REMOVED: DEBUG print of first 5 coefficients
 
     return a;
 }
