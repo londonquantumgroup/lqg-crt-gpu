@@ -167,8 +167,10 @@ std::vector<u64> garner_from_residues(const std::vector<u64>& r,
     for (size_t i = 1; i < k; ++i) {
         u64 sum = c[0] % m[i];
         for (size_t j = 1; j < i; ++j) {
-            // lookup precomputed inverse
-            u64 inv_ij = G.inv_flat[i * k + j];
+            // FIX: The index for M_j^{-1} mod m_i must be (j, i) in the
+            // row-major flattened matrix, NOT (i, j).
+            u64 inv_ij = G.inv_flat[j * k + i]; 
+            
             u64 term = (u64)(((__uint128_t)(c[j] % m[i]) * inv_ij) % m[i]);
             sum = (sum + term) % m[i];
         }
@@ -177,6 +179,7 @@ std::vector<u64> garner_from_residues(const std::vector<u64>& r,
                        ? (r[i] % m[i] - sum)
                        : (r[i] % m[i] + m[i] - sum);
 
+        // This diagonal index (i, i) was already correct.
         u64 inv_ii = G.inv_flat[i * k + i];
         c[i] = (u64)(((__uint128_t)diff * inv_ii) % m[i]);
     }
