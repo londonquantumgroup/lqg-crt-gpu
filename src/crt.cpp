@@ -139,7 +139,6 @@ std::vector<u32> choose_moduli_dynamic(const std::vector<u32>& primes,
     return m;
 }
 
-// --- Garner reconstruction using O(k^2) Basis Transformation ---
 std::vector<u64> garner_from_residues(const std::vector<u64>& r,
     const std::vector<u64>& m, const GarnerTable& G) {
     const size_t k = m.size();
@@ -147,32 +146,34 @@ std::vector<u64> garner_from_residues(const std::vector<u64>& r,
         throw std::runtime_error("garner: size mismatch");
     }
 
-    std::vector<u64> c(k);
-    c[0] = r[0] % m[0];
+    std::vector<u64> a(k);  // Mixed-radix coefficients (using 'a' to match paper)
+    a[0] = r[0] % m[0];
 
-    for (size_t i = 1; i < k; ++i) {
-        // Compute: (r[i] - c[0] - c[1]*m[0] - c[2]*m[0]*m[1] - ...) * inv mod m[i]
+    for (size_t j = 1; j < k; ++j) {
+        // Compute: sum = a[0] + a[1]*m[0] + a[2]*m[0]*m[1] + ... (all mod m[j])
         u64 sum = 0;
-        u64 prod = 1;
+        u64 prod = 1;  // Running product of moduli
 
-        for (size_t j = 0; j < i; ++j) {
-            u64 cj_mod = c[j] % m[i];
-            u64 term = (u64)(((__uint128_t)cj_mod * (__uint128_t)prod) % (__uint128_t)m[i]);
-            sum = (sum + term) % m[i];
+        for (size_t i = 0; i < j; ++i) {
+            u64 ai_mod = a[i] % m[j];
+            u64 term = (u64)(((__uint128_t)ai_mod * (__uint128_t)prod) % (__uint128_t)m[j]);
+            sum = (sum + term) % m[j];
             
-            if (j + 1 < i) {
-                prod = (u64)(((__uint128_t)prod * (__uint128_t)(m[j] % m[i])) % (__uint128_t)m[i]);
+            // Update running product for next iteration
+            if (i + 1 < j) {
+                prod = (u64)(((__uint128_t)prod * (__uint128_t)(m[i] % m[j])) % (__uint128_t)m[j]);
             }
         }
 
-        u64 diff = (r[i] % m[i] >= sum) ?
-                   (r[i] % m[i] - sum) :
-                   (r[i] % m[i] + m[i] - sum);
+        // Compute difference: (r[j] - sum) mod m[j]
+        u64 diff = (r[j] % m[j] >= sum) ?
+                   (r[j] % m[j] - sum) :
+                   (r[j] % m[j] + m[j] - sum);
         
-        // Use precomputed inverse: inv[i][i] = (m[0]*...*m[i-1])^(-1) mod m[i]
-        u64 inv_ii = G.inv_flat[i * k + i];
-        c[i] = (u64)(((__uint128_t)diff * (__uint128_t)inv_ii) % (__uint128_t)m[i]);
+        // Apply precomputed inverse: inv[j][j] = (m[0]*...*m[j-1])^{-1} mod m[j]
+        u64 inv_jj = G.inv_flat[j * k + j];
+        a[j] = (u64)(((__uint128_t)diff * (__uint128_t)inv_jj) % (__uint128_t)m[j]);
     }
 
-    return c;
+    return a;
 }
