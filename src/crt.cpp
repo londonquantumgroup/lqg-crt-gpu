@@ -10,6 +10,7 @@
 struct GarnerTable {
     uint32_t max_k;
     std::vector<uint32_t> primes;
+    // inv_flat stores M_j^{-1} mod m_i at index j * k + i 
     std::vector<uint64_t> inv_flat;
 };
 
@@ -57,7 +58,7 @@ GarnerTable load_garner_table(const std::string& filename, int required_k) {
     return G;
 }
 
-// --- Product tree for CRT ---
+// --- Product tree for CRT (No changes needed) ---
 CRTProductTree build_product_tree(const std::vector<u32>& m) {
     CRTProductTree T;
     T.levels.clear();
@@ -143,45 +144,46 @@ std::vector<u32> choose_moduli_dynamic(const std::vector<u32>& primes,
     return m;
 }
 
-// --- Garner reconstruction using precomputed inverse table ---
+// --- Garner reconstruction using O(k^2) Basis Transformation ---
 std::vector<u64> garner_from_residues(const std::vector<u64>& r,
-                                      const std::vector<u64>& m) {
+    const std::vector<u64>& m) {
     const size_t k = m.size();
     if (r.size() != k) {
         throw std::runtime_error("garner: size mismatch");
     }
 
-    // --- choose which precomputed table to load ---
-    std::string table_file;
-    if (k <= 1000) table_file = "data/garner_k1k.bin";
-    else if (k <= 4000) table_file = "data/garner_k4k.bin";
-    else if (k <= 10000) table_file = "data/garner_k10k.bin";
-    else if (k <= 20000) table_file = "data/garner_k20k.bin";
-    else table_file = "data/garner_k40k.bin";
-
+    // Load Garner Table G (M_j^{-1} mod m_i at index j * k + i)
+    std::string table_file = "data/garner_k1k.bin"; 
     GarnerTable G = load_garner_table(table_file, (int)k);
 
-    std::vector<u64> c(k);
-    c[0] = r[0] % m[0];
+    std::vector<u64> c(k); // Mixed-radix coefficients
 
-    for (size_t i = 1; i < k; ++i) {
-        u64 sum = c[0] % m[i];
-        for (size_t j = 1; j < i; ++j) {
-            // FIX: The index for M_j^{-1} mod m_i must be (j, i) in the
-            // row-major flattened matrix, NOT (i, j).
-            u64 inv_ij = G.inv_flat[j * k + i]; 
+    for (size_t i = 0; i < k; ++i) {
+        // V_i is the current remaining residue, initially r_i mod m_i
+        u64 V_i = r[i] % m[i];
+
+        // --- Inner loop: Basis Transformation (O(1) per step) ---
+        // This loop iteratively removes the contribution of all previous
+        // coefficients c_j by multiplying by the precomputed inverse G[j][i].
+        for (size_t j = 0; j < i; ++j) {
+
+            // 1. Subtract the already-solved coefficient c_j (mod m_i)
+            u64 cj_mod = c[j] % m[i];
             
-            u64 term = (u64)(((__uint128_t)(c[j] % m[i]) * inv_ij) % m[i]);
-            sum = (sum + term) % m[i];
+            // V_i = V_i - c_j (mod m_i)
+            V_i = (V_i >= cj_mod) ? 
+                  (V_i - cj_mod) : 
+                  (V_i + m[i] - cj_mod);
+
+            // 2. Multiply V_i by the precomputed inverse M_j^{-1} mod m_i
+            // Index: j * k + i
+            u64 inv_ji = G.inv_flat[j * k + i]; 
+            
+            V_i = (u64)(((__uint128_t)V_i * (__uint128_t)inv_ji) % (__uint128_t)m[i]);
         }
 
-        u64 diff = (r[i] % m[i] >= sum)
-                       ? (r[i] % m[i] - sum)
-                       : (r[i] % m[i] + m[i] - sum);
-
-        // This diagonal index (i, i) was already correct.
-        u64 inv_ii = G.inv_flat[i * k + i];
-        c[i] = (u64)(((__uint128_t)diff * inv_ii) % m[i]);
+        // The final V_i is the mixed-radix coefficient c_i (or a_i in your paper)
+        c[i] = V_i;
     }
 
     return c;
