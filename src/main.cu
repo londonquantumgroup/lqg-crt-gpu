@@ -102,6 +102,12 @@ SetupData perform_crt_setup(const cpp_int& N, int k, int safety_bits, const Garn
     setup.c32.assign(c.begin(), c.end());
     setup.garner_ms = ms_since(t_garner_start);
 
+    printf("[Setup Debug] First 10 moduli selected: ");
+    for (int i = 0; i < 10 && i < setup.k_used; i++) {
+        printf("%u ", setup.m[i]);
+    }
+    printf("\n");
+
     return setup;
 }
 

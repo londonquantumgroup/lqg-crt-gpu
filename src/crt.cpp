@@ -46,6 +46,10 @@ GarnerTable load_garner_table(const std::string& filename, int required_k) {
                      G.inv_flat.begin() + row * required_k);
         }
     }
+    std::cout << "[Garner] First 10 primes from table: ";
+    for (int i = 0; i < 10 && i < required_k; i++) {
+        std::cout << G.primes[i] << " ";
+    }
 
     std::cout << "[Garner] Loaded " << required_k << "×" << required_k
               << " inverse matrix from " << filename << std::endl;
@@ -146,33 +150,24 @@ std::vector<u64> garner_from_residues(const std::vector<u64>& r,
         throw std::runtime_error("garner: size mismatch");
     }
 
-    std::vector<u64> a(k);  // Mixed-radix coefficients
+    static bool debug_printed = false;
     
-    // a[0] is simply r[0]
+    std::vector<u64> a(k);
     a[0] = r[0] % m[0];
 
-    // For j >= 1, compute a[j] using Garner's formula
     for (size_t j = 1; j < k; ++j) {
-        // We need to compute:
-        // a[j] = ((r[j] - sum) * inv) mod m[j]
-        // where sum = a[0] + a[1]*m[0] + ... + a[j-1]*m[0]*...*m[j-2]
-        // and inv = (m[0]*m[1]*...*m[j-1])^(-1) mod m[j]
-        
         u64 sum = 0;
-        u64 prod = 1;  // Running product of moduli
+        u64 prod = 1;
         
-        // Compute the sum: a[0] + a[1]*m[0] + a[2]*m[0]*m[1] + ...
         for (size_t i = 0; i < j; ++i) {
             u64 ai_mod = a[i] % m[j];
             u64 term = (u64)(((__uint128_t)ai_mod * (__uint128_t)prod) % (__uint128_t)m[j]);
             sum = (sum + term) % m[j];
             
-            // Update running product for next iteration
             u64 mi = m[i] % m[j];
             prod = (u64)(((__uint128_t)prod * (__uint128_t)mi) % (__uint128_t)m[j]);
         }
         
-        // Compute difference: (r[j] - sum) mod m[j]
         u64 rj_mod = r[j] % m[j];
         u64 diff;
         if (rj_mod >= sum) {
@@ -181,13 +176,28 @@ std::vector<u64> garner_from_residues(const std::vector<u64>& r,
             diff = rj_mod + m[j] - sum;
         }
         
-        // Get precomputed inverse: inv[j][j] = (m[0]*...*m[j-1])^(-1) mod m[j]
         u64 inv_jj = G.inv_flat[j * k + j];
         
-        // Compute a[j]
+        // VERIFY THE INVERSE
+        u64 verify = (u64)(((__uint128_t)prod * (__uint128_t)inv_jj) % (__uint128_t)m[j]);
+        
+        if (!debug_printed && j < 10) {
+            printf("[Garner Debug j=%zu] m[j]=%u, prod=%llu, inv=%llu, verify=%llu (should be 1)\n",
+                   j, m[j], (unsigned long long)prod, (unsigned long long)inv_jj, 
+                   (unsigned long long)verify);
+            if (j == 9) debug_printed = true;
+        }
+        
+        if (verify != 1) {
+            printf("[ERROR] Invalid inverse at j=%zu: prod*inv=%llu (mod %u)\n", 
+                   j, (unsigned long long)verify, m[j]);
+            // Compute correct inverse
+            inv_jj = modinv_u64(prod, m[j]);
+            printf("[FIX] Computed correct inverse: %llu\n", (unsigned long long)inv_jj);
+        }
+        
         a[j] = (u64)(((__uint128_t)diff * (__uint128_t)inv_jj) % (__uint128_t)m[j]);
     }
 
     return a;
-
 }
