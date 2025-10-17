@@ -178,8 +178,6 @@ std::vector<u64> garner_from_residues(const std::vector<u64>& r,
         throw std::runtime_error("garner: size mismatch");
     }
 
-    static bool debug_printed = false;
-    
     std::vector<u64> a(k);
     a[0] = r[0] % m[0];
 
@@ -204,25 +202,8 @@ std::vector<u64> garner_from_residues(const std::vector<u64>& r,
             diff = rj_mod + m[j] - sum;
         }
         
+        // Use precomputed inverse from table
         u64 inv_jj = G.inv_flat[j * k + j];
-        
-        // VERIFY THE INVERSE
-        u64 verify = (u64)(((__uint128_t)prod * (__uint128_t)inv_jj) % (__uint128_t)m[j]);
-        
-        if (!debug_printed && j < 10) {
-            printf("[Garner Debug j=%zu] m[j]=%u, prod=%llu, inv=%llu, verify=%llu (should be 1)\n",
-                   j, m[j], (unsigned long long)prod, (unsigned long long)inv_jj, 
-                   (unsigned long long)verify);
-            if (j == 9) debug_printed = true;
-        }
-        
-        if (verify != 1) {
-            printf("[ERROR] Invalid inverse at j=%zu: prod*inv=%llu (mod %u)\n", 
-                   j, (unsigned long long)verify, m[j]);
-            // Compute correct inverse
-            inv_jj = modinv_u64(prod, m[j]);
-            printf("[FIX] Computed correct inverse: %llu\n", (unsigned long long)inv_jj);
-        }
         
         a[j] = (u64)(((__uint128_t)diff * (__uint128_t)inv_jj) % (__uint128_t)m[j]);
     }
