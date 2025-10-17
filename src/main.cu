@@ -52,7 +52,7 @@ void check_gpu_capability() {
 struct SetupData {
     std::vector<u32> m;
     std::vector<u32> r;
-    std::vector<u64> c32;
+    std::vector<u32> c32;
     int k_used;
     double choose_ms;
     double residues_ms;
