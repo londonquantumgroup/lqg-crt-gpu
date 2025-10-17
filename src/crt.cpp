@@ -6,26 +6,7 @@
 #include <fstream>
 #include <iostream>
 
-// --- Garner precomputed table ---
-struct GarnerTable {
-    uint32_t max_k;
-    std::vector<uint32_t> primes;
-    // inv_flat stores M_j^{-1} mod m_i at index j * k + i
-    std::vector<uint64_t> inv_flat;
-};
-
-// File header structure (matches generator)
-struct GarnerHeader {
-    uint32_t magic;
-    uint32_t version;
-    uint32_t max_k;
-    uint32_t num_primes;
-    uint64_t primes_offset;
-    uint64_t inv_table_offset;
-    uint64_t file_size;
-};
-
-// loads the file and returns table (only first required_k entries)
+// Load Garner table from file
 GarnerTable load_garner_table(const std::string& filename, int required_k) {
     std::ifstream f(filename, std::ios::binary);
     if (!f) throw std::runtime_error("Cannot open file: " + filename);
@@ -58,7 +39,7 @@ GarnerTable load_garner_table(const std::string& filename, int required_k) {
     return G;
 }
 
-// --- Product tree for CRT (No changes needed) ---
+// Product tree for CRT
 CRTProductTree build_product_tree(const std::vector<u32>& m) {
     CRTProductTree T;
     T.levels.clear();
