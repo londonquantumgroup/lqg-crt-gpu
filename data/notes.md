@@ -1,0 +1,1 @@
+I need to add bigger files as this currently will onyl run up to k = 4k, 1m bits requires 40k
