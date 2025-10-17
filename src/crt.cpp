@@ -210,7 +210,7 @@ std::vector<u64> garner_from_residues(const std::vector<u64>& r,
         
         // ADD THIS DEBUG FOR FIRST FEW ITERATIONS
         if (j < 3) {
-            size_t idx = j * k + j;
+            size_t idx = j * G.max_k + j;
             printf("[garner j=%zu] Accessing G.inv_flat[%zu], m[j]=%llu, prod=%llu, diff=%llu\n",
                    j, idx, (unsigned long long)m[j], (unsigned long long)prod, (unsigned long long)diff);
         }
