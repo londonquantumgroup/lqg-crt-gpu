@@ -6,7 +6,6 @@
 #include <fstream>
 #include <iostream>
 
-// Load Garner table from file
 GarnerTable load_garner_table(const std::string& filename, int required_k) {
     std::ifstream f(filename, std::ios::binary);
     if (!f) throw std::runtime_error("Cannot open file: " + filename);
@@ -27,7 +26,13 @@ GarnerTable load_garner_table(const std::string& filename, int required_k) {
     G.primes.resize(required_k);
     f.read(reinterpret_cast<char*>(G.primes.data()), required_k * sizeof(uint32_t));
 
-    // Read flattened inverse matrix - FIXED: extract k×k submatrix properly
+    std::cout << "[Garner] First 10 primes from table: ";
+    for (int i = 0; i < 10 && i < required_k; i++) {
+        std::cout << G.primes[i] << " ";
+    }
+    std::cout << std::endl;
+
+    // Read flattened inverse matrix
     f.seekg(h.inv_table_offset);
     G.inv_flat.resize((size_t)required_k * required_k);
 
@@ -36,23 +41,32 @@ GarnerTable load_garner_table(const std::string& filename, int required_k) {
         f.read(reinterpret_cast<char*>(G.inv_flat.data()),
                (size_t)required_k * required_k * sizeof(uint64_t));
     } else {
-        // Read row-by-row to extract k×k top-left submatrix
+        // CRITICAL FIX: When reading a submatrix, the file contains max_k columns per row
+        // but we're storing only required_k columns per row
         std::vector<uint64_t> temp_row(h.max_k);
         for (int row = 0; row < required_k; ++row) {
+            // Seek to the start of this row in the file
+            f.seekg(h.inv_table_offset + (size_t)row * h.max_k * sizeof(uint64_t));
+            
+            // Read the full row from file
             f.read(reinterpret_cast<char*>(temp_row.data()), 
                    h.max_k * sizeof(uint64_t));
-            // Copy first required_k elements of this row
+            
+            // Copy only the first required_k elements to our matrix
             std::copy(temp_row.begin(), temp_row.begin() + required_k,
                      G.inv_flat.begin() + row * required_k);
         }
     }
-    std::cout << "[Garner] First 10 primes from table: ";
-    for (int i = 0; i < 10 && i < required_k; i++) {
-        std::cout << G.primes[i] << " ";
-    }
 
     std::cout << "[Garner] Loaded " << required_k << "×" << required_k
               << " inverse matrix from " << filename << std::endl;
+
+    // DEBUG: Print first few diagonal elements
+    std::cout << "[Garner] First 5 diagonal inverses: ";
+    for (int i = 0; i < 5 && i < required_k; i++) {
+        std::cout << G.inv_flat[i * required_k + i] << " ";
+    }
+    std::cout << std::endl;
 
     return G;
 }
