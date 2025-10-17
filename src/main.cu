@@ -377,7 +377,7 @@ void run_cgbn_benchmark(int M, const cpp_int& N,
 
     cgbn_bn_mem_t *h_divs = nullptr, *h_r = nullptr;
     cudaHostAlloc(&h_divs, M * sizeof(cgbn_bn_mem_t), cudaHostAllocDefault);
-    cudaHostAlloc(&h_r, M * sizeof(cbn_bn_mem_t), cudaHostAllocDefault);
+    cudaHostAlloc(&h_r, M * sizeof(cgbn_bn_mem_t), cudaHostAllocDefault);
 
     for (int i = 0; i < M; ++i) { cppint_to_cgbn_mem(divisors[i], h_divs[i]); }
 
@@ -489,20 +489,38 @@ int main(int argc, char** argv) {
     cpp_int N = read_big_decimal(Ns);
     const int SAFETY_BITS = 128;
 
+    // Determine required k for table selection
+    int required_k;
+    if (k > 0) {
+        required_k = k;
+    } else {
+        // Estimate k needed dynamically
+        size_t nbits = bitlen_cppint(N);
+        double target_bits = (double)nbits + (double)SAFETY_BITS;
+        required_k = (int)(target_bits / 20.0) + 100;
+        if (required_k < 100) required_k = 100;
+    }
+
+    // Select appropriate table file based on required_k
     std::string table_file;
-    if (k <= 1000) {
+    if (required_k <= 1000) {
         table_file = "data/garner_k1k.bin";
-    } else if (k <= 4000) {
+    } else if (required_k <= 4000) {
         table_file = "data/garner_k4k.bin";
-    } else if (k <= 10000) {
+    } else if (required_k <= 10000) {
         table_file = "data/garner_k10k.bin";
-    } else if (k <= 20000) {
+    } else if (required_k <= 20000) {
         table_file = "data/garner_k20k.bin";
     } else {
         table_file = "data/garner_k40k.bin";
+        if (required_k > 40000) {
+            fprintf(stderr, "Warning: Need k=%d but max table is k=40000\n", required_k);
+            required_k = 40000;
+        }
     }
 
-    GarnerTable G = load_garner_table(table_file, k > 0 ? k : 1000);
+    printf("[Setup] Loading Garner table: %s (k=%d)\n", table_file.c_str(), required_k);
+    GarnerTable G = load_garner_table(table_file, required_k);
 
     SetupData setup = perform_crt_setup(N, k, SAFETY_BITS, G);
 
