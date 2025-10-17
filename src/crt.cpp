@@ -147,23 +147,31 @@ std::vector<u64> garner_from_residues(const std::vector<u64>& r,
         throw std::runtime_error("garner: size mismatch");
     }
 
-    std::vector<u64> c(k); // Mixed-radix coefficients
+    std::vector<u64> c(k);
+    c[0] = r[0] % m[0];
 
-    for (size_t i = 0; i < k; ++i) {
-        // V_i is the current remaining residue, initially r_i mod m_i
-        u64 V_i = r[i] % m[i];
+    for (size_t i = 1; i < k; ++i) {
+        // Compute: (r[i] - c[0] - c[1]*m[0] - c[2]*m[0]*m[1] - ...) * inv mod m[i]
+        u64 sum = 0;
+        u64 prod = 1;
 
-        // --- Inner loop: Basis Transformation (O(1) per step) ---
         for (size_t j = 0; j < i; ++j) {
             u64 cj_mod = c[j] % m[i];
-            V_i = (V_i >= cj_mod) ?
-                  (V_i - cj_mod) :
-                  (V_i + m[i] - cj_mod);
-
-            u64 inv_ji = G.inv_flat[j * k + i];
-            V_i = (u64)(((__uint128_t)V_i * (__uint128_t)inv_ji) % (__uint128_t)m[i]);
+            u64 term = (u64)(((__uint128_t)cj_mod * (__uint128_t)prod) % (__uint128_t)m[i]);
+            sum = (sum + term) % m[i];
+            
+            if (j + 1 < i) {
+                prod = (u64)(((__uint128_t)prod * (__uint128_t)(m[j] % m[i])) % (__uint128_t)m[i]);
+            }
         }
-        c[i] = V_i;
+
+        u64 diff = (r[i] % m[i] >= sum) ?
+                   (r[i] % m[i] - sum) :
+                   (r[i] % m[i] + m[i] - sum);
+        
+        // Use precomputed inverse: inv[i][i] = (m[0]*...*m[i-1])^(-1) mod m[i]
+        u64 inv_ii = G.inv_flat[i * k + i];
+        c[i] = (u64)(((__uint128_t)diff * (__uint128_t)inv_ii) % (__uint128_t)m[i]);
     }
 
     return c;
