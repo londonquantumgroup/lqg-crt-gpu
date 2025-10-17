@@ -64,17 +64,17 @@ SetupData perform_crt_setup(const cpp_int& N, int k, int safety_bits, const Garn
 
     auto t_choose_start = now_tp();
     if (k < 0) {
-        int k_dyn = 0;
-        setup.m = choose_moduli_dynamic(G.primes, N, safety_bits, &k_dyn);
-        setup.k_used = k_dyn;
+    int k_dyn = 0;
+    setup.m = choose_moduli_dynamic(G.primes, N, safety_bits, &k_dyn);   // ← USE G.primes, not global_primes!
+    setup.k_used = k_dyn;
+} else {
+    if (k > (int)G.primes.size()) {
+        setup.k_used = (int)G.primes.size();
     } else {
-        if (k > (int)G.primes.size()) {
-            setup.k_used = (int)G.primes.size();
-        } else {
-            setup.k_used = k;
-        }
-        setup.m.assign(G.primes.begin(), G.primes.begin() + setup.k_used);
+        setup.k_used = k;
     }
+    setup.m.assign(G.primes.begin(), G.primes.begin() + setup.k_used);
+}
     setup.choose_ms = ms_since(t_choose_start);
 
     auto t_residues_start = now_tp();
@@ -527,6 +527,18 @@ int main(int argc, char** argv) {
 
     printf("[Setup] Loading Garner table: %s (k=%d)\n", table_file.c_str(), required_k);
     GarnerTable G = load_garner_table(table_file, required_k);
+
+        printf("[Debug] G.primes first 10: ");
+    for (int i = 0; i < 10 && i < (int)G.primes.size(); i++) {
+        printf("%u ", G.primes[i]);
+    }
+    printf("\n");
+
+    printf("[Debug] global_primes last 10: ");
+    for (int i = global_primes.size() - 10; i < global_primes.size(); i++) {
+        printf("%u ", global_primes[i]);
+    }
+    printf("\n");
 
     SetupData setup = perform_crt_setup(N, k, SAFETY_BITS, G);
 
