@@ -138,6 +138,19 @@ void remainder_tree_down(const CRTProductTree &T, const cpp_int &N,
 std::vector<u32> choose_moduli_dynamic(const std::vector<u32>& primes,
                                        const cpp_int& N, int safety_bits,
                                        int* out_k) {
+        // ADD THIS DEBUG
+        printf("[choose_moduli_dynamic] Called with %zu primes\n", primes.size());
+        printf("[choose_moduli_dynamic] First 10 primes: ");
+        for (int i = 0; i < 10 && i < (int)primes.size(); i++) {
+            printf("%u ", primes[i]);
+        }
+        printf("\n");
+        printf("[choose_moduli_dynamic] Last 10 primes: ");
+        for (int i = std::max(0, (int)primes.size() - 10); i < (int)primes.size(); i++) {
+            printf("%u ", primes[i]);
+        }
+        printf("\n");
+        
     size_t nbits = bitlen_cppint(N);
     double target_bits = (double)nbits + (double)safety_bits;
 
