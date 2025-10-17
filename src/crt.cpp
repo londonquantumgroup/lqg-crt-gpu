@@ -27,11 +27,25 @@ GarnerTable load_garner_table(const std::string& filename, int required_k) {
     G.primes.resize(required_k);
     f.read(reinterpret_cast<char*>(G.primes.data()), required_k * sizeof(uint32_t));
 
-    // Read flattened inverse matrix (only first k×k)
+    // Read flattened inverse matrix - FIXED: extract k×k submatrix properly
     f.seekg(h.inv_table_offset);
     G.inv_flat.resize((size_t)required_k * required_k);
-    f.read(reinterpret_cast<char*>(G.inv_flat.data()),
-           (size_t)required_k * required_k * sizeof(uint64_t));
+
+    if (required_k == (int)h.max_k) {
+        // Read entire matrix at once
+        f.read(reinterpret_cast<char*>(G.inv_flat.data()),
+               (size_t)required_k * required_k * sizeof(uint64_t));
+    } else {
+        // Read row-by-row to extract k×k top-left submatrix
+        std::vector<uint64_t> temp_row(h.max_k);
+        for (int row = 0; row < required_k; ++row) {
+            f.read(reinterpret_cast<char*>(temp_row.data()), 
+                   h.max_k * sizeof(uint64_t));
+            // Copy first required_k elements of this row
+            std::copy(temp_row.begin(), temp_row.begin() + required_k,
+                     G.inv_flat.begin() + row * required_k);
+        }
+    }
 
     std::cout << "[Garner] Loaded " << required_k << "×" << required_k
               << " inverse matrix from " << filename << std::endl;
