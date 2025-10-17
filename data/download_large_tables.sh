@@ -9,7 +9,7 @@ set -e
 BUCKET_NAME="lqg-crt-inverse-matrix-data"
 REGION="eu-north-1"
 
-# Construct base URL - removed the VERSION variable and garner-tables/ prefix
+# Construct base URL 
 # since your files are directly in the bucket root
 if [ "$REGION" = "us-east-1" ]; then
     BASE_URL="https://${BUCKET_NAME}.s3.amazonaws.com"
