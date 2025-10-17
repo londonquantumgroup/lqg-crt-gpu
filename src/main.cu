@@ -528,13 +528,6 @@ int main(int argc, char** argv) {
     printf("[Setup] Loading Garner table: %s (k=%d)\n", table_file.c_str(), required_k);
     GarnerTable G = load_garner_table(table_file, required_k);
 
-
-    printf("[Debug] global_primes last 10: ");
-    for (int i = global_primes.size() - 10; i < global_primes.size(); i++) {
-        printf("%u ", global_primes[i]);
-    }
-    printf("\n");
-
     SetupData setup = perform_crt_setup(N, k, SAFETY_BITS, G);
 
     DeviceCRTData crt_data;
