@@ -19,7 +19,7 @@ GarnerTable load_garner_table(const std::string& filename, int required_k) {
         throw std::runtime_error("Requested k larger than table size");
 
     GarnerTable G;
-    G.max_k = h.max_k;
+    G.max_k = required_k;omg
 
     // Read primes
     f.seekg(h.primes_offset);
