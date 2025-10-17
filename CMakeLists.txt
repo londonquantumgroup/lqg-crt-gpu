@@ -55,6 +55,33 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 # ============================================================
+# 🧠 AUTO-INSTALL GMP IF MISSING (for Colab / CI / clean systems)
+# ============================================================
+find_path(GMP_INCLUDE_DIR NAMES gmp.h)
+find_library(GMP_LIBRARY NAMES gmp)
+if(NOT GMP_INCLUDE_DIR OR NOT GMP_LIBRARY)
+    message(WARNING "GMP not found — attempting to install it automatically (requires sudo or apt)...")
+
+    # Detect if apt-get is available (Linux/Colab)
+    execute_process(
+        COMMAND bash -c "command -v apt-get >/dev/null 2>&1 && echo YES || echo NO"
+        OUTPUT_VARIABLE HAS_APT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    if(HAS_APT STREQUAL "YES")
+        message(STATUS "Installing libgmp-dev via apt-get...")
+        execute_process(COMMAND bash -c "apt-get update -y && apt-get install -y libgmp-dev")
+    else()
+        message(WARNING "Automatic installation skipped — please install GMP manually.")
+    endif()
+
+    # Recheck after installation
+    find_path(GMP_INCLUDE_DIR NAMES gmp.h)
+    find_library(GMP_LIBRARY NAMES gmp)
+endif()
+
+# ============================================================
 # DEPENDENCIES
 # ============================================================
 find_package(Boost REQUIRED COMPONENTS system)
