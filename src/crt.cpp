@@ -178,6 +178,12 @@ std::vector<u64> garner_from_residues(const std::vector<u64>& r,
         throw std::runtime_error("garner: size mismatch");
     }
 
+    // ADD THIS DEBUG
+    printf("[garner_from_residues] k=%zu, G.max_k=%u, G.inv_flat.size()=%zu\n", 
+           k, G.max_k, G.inv_flat.size());
+    printf("[garner_from_residues] Expected inv_flat size for k=%zu: %zu\n", 
+           k, k * k);
+    
     std::vector<u64> a(k);
     a[0] = r[0] % m[0];
 
@@ -202,11 +208,33 @@ std::vector<u64> garner_from_residues(const std::vector<u64>& r,
             diff = rj_mod + m[j] - sum;
         }
         
-        // Use precomputed inverse from table
+        // ADD THIS DEBUG FOR FIRST FEW ITERATIONS
+        if (j < 3) {
+            size_t idx = j * k + j;
+            printf("[garner j=%zu] Accessing G.inv_flat[%zu], m[j]=%llu, prod=%llu, diff=%llu\n",
+                   j, idx, (unsigned long long)m[j], (unsigned long long)prod, (unsigned long long)diff);
+        }
+        
         u64 inv_jj = G.inv_flat[j * k + j];
         
+        if (j < 3) {
+            printf("[garner j=%zu] inv_jj=%llu, computing a[j]...\n", 
+                   j, (unsigned long long)inv_jj);
+        }
+        
         a[j] = (u64)(((__uint128_t)diff * (__uint128_t)inv_jj) % (__uint128_t)m[j]);
+        
+        if (j < 3) {
+            printf("[garner j=%zu] a[j]=%llu\n", j, (unsigned long long)a[j]);
+        }
     }
+
+    // ADD THIS
+    printf("[garner_from_residues] First 5 coefficients: ");
+    for (size_t i = 0; i < 5 && i < k; i++) {
+        printf("%llu ", (unsigned long long)a[i]);
+    }
+    printf("\n");
 
     return a;
 }
