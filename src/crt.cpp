@@ -215,7 +215,7 @@ std::vector<u64> garner_from_residues(const std::vector<u64>& r,
                    j, idx, (unsigned long long)m[j], (unsigned long long)prod, (unsigned long long)diff);
         }
         
-        u64 inv_jj = G.inv_flat[j * k + j];
+        u64 inv_jj = G.inv_flat[j * G.max_k + j];
         
         if (j < 3) {
             printf("[garner j=%zu] inv_jj=%llu, computing a[j]...\n", 
