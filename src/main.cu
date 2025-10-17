@@ -405,21 +405,43 @@ void run_cgbn_benchmark(int M, const cpp_int& N,
     CUDA_CHECK(cudaMemcpy(d_divs, h_divs, M * sizeof(cgbn_bn_mem_t), cudaMemcpyHostToDevice));
     double cgbn_h2d_ms = ms_since(t_h2d_start);
 
-    cudaEvent_t c0, c1;
-    CUDA_CHECK(cudaEventCreate(&c0));
-    CUDA_CHECK(cudaEventCreate(&c1));
+     // Kernel timing with chunking
+cudaEvent_t c0, c1;
+CUDA_CHECK(cudaEventCreate(&c0));
+CUDA_CHECK(cudaEventCreate(&c1));
 
-    CUDA_CHECK(cudaEventRecord(c0));
-    int threads = 128;
-    if (threads % CGBN_TPI) threads += (CGBN_TPI - (threads % CGBN_TPI));
-    int blocks = (M * CGBN_TPI + threads - 1) / threads;
-    cgbn_divrem_kernel<<<blocks, threads>>>(report, d_N_single, d_divs, d_qm, d_rm, M);
-    CUDA_CHECK(cudaGetLastError());
+auto t_launch_start = now_tp();
+CUDA_CHECK(cudaEventRecord(c0));
+
+    // CHUNKED PROCESSING: Process 500k divisions at a time
+    const int CGBN_CHUNK_SIZE = 500000;
+
+    for (int offset = 0; offset < M; offset += CGBN_CHUNK_SIZE) {
+        int chunk = std::min(CGBN_CHUNK_SIZE, M - offset);
+        
+        int threads = 128;
+        if (threads % CGBN_TPI) threads += (CGBN_TPI - (threads % CGBN_TPI));
+        int instances_per_block = threads / CGBN_TPI;
+        int blocks = (chunk + instances_per_block - 1) / instances_per_block;
+        
+        cgbn_divrem_kernel<<<blocks, threads>>>(
+            report, 
+            d_N_single, 
+            d_divs + offset,    // offset into divisors array
+            d_qm + offset,      // offset into quotients array
+            d_rm + offset,      // offset into remainders array
+            chunk               // number of divisions in this chunk
+        );
+        CUDA_CHECK(cudaGetLastError());
+    }
+
     CUDA_CHECK(cudaEventRecord(c1));
     CUDA_CHECK(cudaEventSynchronize(c1));
 
+    double cgbn_launch_ms = ms_since(t_launch_start);
     float cgbn_divrem_ms = 0.f;
     CUDA_CHECK(cudaEventElapsedTime(&cgbn_divrem_ms, c0, c1));
+
 
     auto t_d2h_start = now_tp();
     CUDA_CHECK(cudaMemcpy(h_r, d_rm, M * sizeof(cgbn_bn_mem_t), cudaMemcpyDeviceToHost));
