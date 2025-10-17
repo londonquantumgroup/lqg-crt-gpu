@@ -146,23 +146,25 @@ std::vector<u64> garner_from_residues(const std::vector<u64>& r,
         throw std::runtime_error("garner: size mismatch");
     }
 
-    std::vector<u64> a(k);  // Mixed-radix coefficients (using 'a' to match paper)
+    std::vector<u64> a(k);  // Mixed-radix coefficients
     a[0] = r[0] % m[0];
 
     for (size_t j = 1; j < k; ++j) {
-        // Compute: sum = a[0] + a[1]*m[0] + a[2]*m[0]*m[1] + ... (all mod m[j])
+        // Compute sum = a[0] * prod(m[0]...m[j-1]) + a[1] * prod(m[1]...m[j-1]) + ... + a[j-1]
+        // All mod m[j]
+        
         u64 sum = 0;
-        u64 prod = 1;  // Running product of moduli
-
+        
         for (size_t i = 0; i < j; ++i) {
+            // Compute product: m[i] * m[i+1] * ... * m[j-1] mod m[j]
+            u64 prod = 1;
+            for (size_t t = i; t < j; ++t) {
+                prod = (u64)(((__uint128_t)prod * (__uint128_t)(m[t] % m[j])) % (__uint128_t)m[j]);
+            }
+            
             u64 ai_mod = a[i] % m[j];
             u64 term = (u64)(((__uint128_t)ai_mod * (__uint128_t)prod) % (__uint128_t)m[j]);
             sum = (sum + term) % m[j];
-            
-            // Update running product for next iteration
-            if (i + 1 < j) {
-                prod = (u64)(((__uint128_t)prod * (__uint128_t)(m[i] % m[j])) % (__uint128_t)m[j]);
-            }
         }
 
         // Compute difference: (r[j] - sum) mod m[j]
