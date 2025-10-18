@@ -676,16 +676,18 @@ int main(int argc, char** argv) {
         
         print_benchmark_results(M, results, setup.k_used, k);
         
-        double perM_runtime_ms = results.h2d_chunks_ms + results.kernel_ms + 
-                                results.d2h_chunks_ms;
-        double amortized_setup_ms = (total_setup_ms * 
-                                    (double(M) / double(total_divs + M)));
-        double crt_full_ms = amortized_setup_ms + perM_runtime_ms;
-        double crt_full_mps = (M / 1e6) / (crt_full_ms / 1000.0);
-        printf("CRT Full (amortized): %.2f M/s\n", crt_full_mps);
-        
-        total_runtime_ms += perM_runtime_ms;
+                // === Fair CRT-GPU throughput accounting ===
+        // Accumulate total divisions and total runtime (no double counting)
         total_divs += M;
+        total_runtime_ms += results.h2d_chunks_ms + results.kernel_ms + results.d2h_chunks_ms;
+
+        // Compute fair cumulative throughput
+        double total_elapsed_ms = total_setup_ms + total_runtime_ms;
+        double crt_full_mps = (total_elapsed_ms > 0.0)
+            ? (total_divs / 1e6) / (total_elapsed_ms / 1000.0)
+            : 0.0;
+
+        printf("CRT Full (amortized cumulative): %.2f M/s\n", crt_full_mps);
         
 #ifndef NO_CGBN
             run_cgbn_benchmark(M, N, divisors, d_N_single);
