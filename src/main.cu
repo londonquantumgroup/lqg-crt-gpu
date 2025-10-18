@@ -524,10 +524,13 @@ int main(int argc, char** argv) {
 
         print_benchmark_results(M, results, setup.k_used, k);
 
-        double perM_runtime_ms = results.h2d_chunks_ms + results.kernel_ms + results.d2h_chunks_ms;
-        double crt_full_ms = total_setup_ms + perM_runtime_ms;
-        double crt_full_mps = (crt_full_ms > 0) ? (M / 1e6) / (crt_full_ms / 1000.0) : 0.0;
-        printf("CRT Full (amortized): %.2f M/s\n", crt_full_mps);
+        total_divs += M;
+        total_runtime_ms += results.h2d_chunks_ms + results.kernel_ms + results.d2h_chunks_ms;
+
+        double total_elapsed_ms = total_setup_ms + total_runtime_ms;
+        double crt_full_mps = (total_elapsed_ms > 0.0)
+            ? (total_divs / 1e6) / (total_elapsed_ms / 1000.0)
+            : 0.0;
 
         total_runtime_ms += perM_runtime_ms;
         total_divs += M;
