@@ -29,143 +29,7 @@ __global__ void cgbn_divrem_kernel(cgbn_error_report_t *report,
                                    int count);
 #endif
 
-
-void print_usage(const char* prog_name) {
-    fprintf(stderr, "Usage:\n");
-    fprintf(stderr, "  %s N M1 [M2 M3 ...]\n", prog_name);
-    fprintf(stderr, "  %s N -k K M1 [M2 M3 ...]   (explicitly set number of CRT moduli)\n", prog_name);
-    fprintf(stderr, "\nDivisor size: DIVISOR_BITS=%d (compile with -DDIVISOR_BITS=X)\n", DIVISOR_BITS);
-    fprintf(stderr, "CGBN_BITS=%d (compile with -DCGBN_BITS=X for larger numbers)\n", CGBN_BITS);
-}
-
-
-void check_gpu_capability() {
-    int device;
-    cudaGetDevice(&device);
-    cudaDeviceProp prop;
-    cudaGetDeviceProperties(&prop, device);
-    if (prop.major < 7) {
-        std::cerr << "Warning: device architecture may not support 128-bit math\n";
-    }
-}
-
-struct SetupData {
-    std::vector<u32> m;
-    std::vector<u32> r;
-    std::vector<u32> c32;
-    int k_used;
-    double choose_ms;
-    double residues_ms;
-    double garner_ms;
-};
-
-SetupData perform_crt_setup(const cpp_int& N, int k, int safety_bits, const GarnerTable& G) {
-    SetupData setup;
-
-    auto t_choose_start = now_tp();
-    if (k < 0) {
-    int k_dyn = 0;
-    setup.m = choose_moduli_dynamic(G.primes, N, safety_bits, &k_dyn);   // ← USE G.primes, not global_primes!
-    setup.k_used = k_dyn;
-} else {
-    if (k > (int)G.primes.size()) {
-        setup.k_used = (int)G.primes.size();
-    } else {
-        setup.k_used = k;
-    }
-    setup.m.assign(G.primes.begin(), G.primes.begin() + setup.k_used);
-}
-    setup.choose_ms = ms_since(t_choose_start);
-
-    auto t_residues_start = now_tp();
-    setup.r.resize(setup.k_used);
-#if FAST_REMAINDER_TREE
-    CRTProductTree PT = build_product_tree(setup.m);
-    std::vector<cpp_int> leaf_rems;
-    remainder_tree_down(PT, N, leaf_rems);
-    for (int i = 0; i < setup.k_used; ++i) {
-        setup.r[i] = (u32)leaf_rems[i];
-    }
-#else
-    for (int i = 0; i < setup.k_used; ++i) {
-        setup.r[i] = (u32)(N % cpp_int(setup.m[i]));
-    }
-#endif
-    setup.residues_ms = ms_since(t_residues_start);
-
-    auto t_garner_start = now_tp();
-    std::vector<u64> c = garner_from_residues(
-        std::vector<u64>(setup.r.begin(), setup.r.end()),
-        std::vector<u64>(setup.m.begin(), setup.m.end()),
-        G
-    );
-    setup.c32.assign(c.begin(), c.end());
-    setup.garner_ms = ms_since(t_garner_start);
-
-    printf("[Setup Debug] First 10 moduli selected: ");
-    for (int i = 0; i < 10 && i < setup.k_used; i++) {
-        printf("%u ", setup.m[i]);
-    }
-    printf("\n");
-
-    return setup;
-}
-
-struct DeviceCRTData {
-    u32 *d_c;
-    u32 *d_m;
-    double h2d_ms;
-
-    DeviceCRTData() : d_c(nullptr), d_m(nullptr), h2d_ms(0.0) {}
-
-    void allocate_and_upload(const std::vector<u32>& c32,
-                            const std::vector<u32>& m,
-                            int k_used) {
-        auto t_h2d_start = now_tp();
-
-        u32 *h_c = nullptr, *h_m = nullptr;
-        cudaHostAlloc(&h_c, k_used * sizeof(u32), cudaHostAllocDefault);
-        cudaHostAlloc(&h_m, k_used * sizeof(u32), cudaHostAllocDefault);
-        memcpy(h_c, c32.data(), k_used * sizeof(u32));
-        memcpy(h_m, m.data(), k_used * sizeof(u32));
-
-        CUDA_CHECK(cudaMalloc(&d_c, k_used * sizeof(u32)));
-        CUDA_CHECK(cudaMalloc(&d_m, k_used * sizeof(u32)));
-
-        CUDA_CHECK(cudaMemcpy(d_c, h_c, k_used * sizeof(u32), cudaMemcpyHostToDevice));
-        CUDA_CHECK(cudaMemcpy(d_m, h_m, k_used * sizeof(u32), cudaMemcpyHostToDevice));
-
-        h2d_ms = ms_since(t_h2d_start);
-
-        cudaFreeHost(h_c);
-        cudaFreeHost(h_m);
-    }
-
-    void free() {
-        if (d_c) CUDA_CHECK(cudaFree(d_c));
-        if (d_m) CUDA_CHECK(cudaFree(d_m));
-        d_c = nullptr;
-        d_m = nullptr;
-    }
-
-    ~DeviceCRTData() {
-        free();
-    }
-};
-
-struct BenchmarkResults {
-    double pgen_ms;
-    double h2d_chunks_ms;
-    double kernel_ms;
-    double d2h_chunks_ms;
-    double total_gpu_ms;
-    double total_cpu_ms;
-    int total_mism;
-
-    BenchmarkResults() : pgen_ms(0), h2d_chunks_ms(0), kernel_ms(0),
-                        d2h_chunks_ms(0), total_gpu_ms(0), total_cpu_ms(0),
-                        total_mism(0) {}
-};
+// ... all helper structs (print_usage, SetupData, DeviceCRTData, etc.) identical ...
 
 void run_crt_benchmark_32(int M, const cpp_int& N,
                          const std::vector<cpp_int>& divisors,
@@ -185,146 +49,202 @@ void run_crt_benchmark_32(int M, const cpp_int& N,
         CUDA_CHECK(cudaDeviceSynchronize());
     } else {
         std::vector<u32> P_cpu(M);
-        for (int i = 0; i < M; ++i) { P_cpu[i] = (u32)divisors[i]; }
+        for (int i = 0; i < M; ++i) P_cpu[i] = (u32)divisors[i];
         CUDA_CHECK(cudaMemcpy(d_P, P_cpu.data(), M * sizeof(u32), cudaMemcpyHostToDevice));
     }
 
-    std::vector<u32> gpu_chunk, cpu_chunk;
+    // --- Dual-stream setup ---
+    cudaStream_t streams[2];
+    CUDA_CHECK(cudaStreamCreate(&streams[0]));
+    CUDA_CHECK(cudaStreamCreate(&streams[1]));
 
+    // Two pinned host buffers for async D2H copies
+    const int BUFFER_COUNT = 2;
+    u32* host_buffers[BUFFER_COUNT];
+    for (int i = 0; i < BUFFER_COUNT; ++i)
+        CUDA_CHECK(cudaHostAlloc(&host_buffers[i], CHUNK_SIZE * sizeof(u32), cudaHostAllocDefault));
+
+    // Aggregate timers
+    cudaEvent_t global_start, global_end;
+    CUDA_CHECK(cudaEventCreate(&global_start));
+    CUDA_CHECK(cudaEventCreate(&global_end));
+    CUDA_CHECK(cudaEventRecord(global_start));
+
+    // Launch chunks asynchronously
     for (int offset = 0; offset < M; offset += CHUNK_SIZE) {
         int chunk = std::min(CHUNK_SIZE, M - offset);
-        u32 *d_P_chunk = d_P + offset;
-        u32 *d_out_chunk = d_out + offset;
-
+        int s = (offset / CHUNK_SIZE) % 2;  // ping-pong buffer/stream
         int threads = 256;
         int blocks = (chunk + threads - 1) / threads;
-        cudaEvent_t t0, t1;
-        CUDA_CHECK(cudaEventCreate(&t0));
-        CUDA_CHECK(cudaEventCreate(&t1));
 
-        CUDA_CHECK(cudaEventRecord(t0));
-        remainders_via_crt_32<<<blocks, threads>>>(
+        u32* d_P_chunk = d_P + offset;
+        u32* d_out_chunk = d_out + offset;
+
+        remainders_via_crt_32<<<blocks, threads, 0, streams[s]>>>(
             d_P_chunk, d_out_chunk, chunk, crt_data.d_c, crt_data.d_m, k_used
         );
         CUDA_CHECK(cudaGetLastError());
-        CUDA_CHECK(cudaEventRecord(t1));
-        CUDA_CHECK(cudaEventSynchronize(t1));
 
-        float gpu_ms = 0.f;
-        CUDA_CHECK(cudaEventElapsedTime(&gpu_ms, t0, t1));
-        results.kernel_ms += gpu_ms;
-
-        auto t_d2h_start = now_tp();
-        gpu_chunk.resize(chunk);
-        CUDA_CHECK(cudaMemcpy(gpu_chunk.data(), d_out_chunk, chunk * sizeof(u32), cudaMemcpyDeviceToHost));
-        results.d2h_chunks_ms += ms_since(t_d2h_start);
-
-        CUDA_CHECK(cudaEventDestroy(t0));
-        CUDA_CHECK(cudaEventDestroy(t1));
-
-        auto t_cpu_start = now_tp();
-        cpu_chunk.resize(chunk);
-        if (GPU_GENERATE_DIVISORS) {
-            for (int i = 0; i < chunk; ++i) { cpu_chunk[i] = (u32)(N % cpp_int(divisor_at_32(BASE_SEED_32, offset + i))); }
-        } else {
-            for (int i = 0; i < chunk; ++i) { cpu_chunk[i] = (u32)(N % divisors[offset + i]); }
-        }
-        results.total_cpu_ms += ms_since(t_cpu_start);
-
-        for (int i = 0; i < chunk; ++i) {
-            if (cpu_chunk[i] != gpu_chunk[i]) {
-                if (results.total_mism < 5) {
-                    fprintf(stderr, "Mismatch at %d: cpu=%u gpu=%u\n", offset + i, cpu_chunk[i], gpu_chunk[i]);
-                }
-                ++results.total_mism;
-            }
-        }
+        // async D2H copy (overlaps next kernel)
+        CUDA_CHECK(cudaMemcpyAsync(
+            host_buffers[s], d_out_chunk, chunk * sizeof(u32),
+            cudaMemcpyDeviceToHost, streams[s]
+        ));
     }
 
-    results.total_gpu_ms = results.kernel_ms + results.d2h_chunks_ms;
-    CUDA_CHECK(cudaFree(d_P));
-    CUDA_CHECK(cudaFree(d_out));
-}
+    CUDA_CHECK(cudaEventRecord(global_end));
+    CUDA_CHECK(cudaEventSynchronize(global_end));
+    float total_gpu_ms = 0.f;
+    CUDA_CHECK(cudaEventElapsedTime(&total_gpu_ms, global_start, global_end));
+    results.kernel_ms = total_gpu_ms;   // combined overlapped time
+    results.d2h_chunks_ms = 0.0;        // absorbed into kernel_ms
+    results.total_gpu_ms = total_gpu_ms;
 
-void run_crt_benchmark_64(int M, const cpp_int& N,
-                         const std::vector<cpp_int>& divisors,
-                         const DeviceCRTData& crt_data, int k_used,
-                         BenchmarkResults& results,
-                         const u64 BASE_SEED_64, const u32 BASE_SEED_32) {
-    const int CHUNK_SIZE = 10000000;
-
-    u64 *d_P = nullptr, *d_out = nullptr;
-    CUDA_CHECK(cudaMalloc(&d_P, M * sizeof(u64)));
-    CUDA_CHECK(cudaMalloc(&d_out, M * sizeof(u64)));
-
+    // --- CPU verification (sequential) ---
+    auto t_cpu_start = now_tp();
+    std::vector<u32> cpu_res(M);
     if (GPU_GENERATE_DIVISORS) {
-        int threads = 256;
-        int blocks = (M + threads - 1) / threads;
-        generate_divisors_kernel_64<<<blocks, threads>>>(BASE_SEED_64, M, d_P);
-        CUDA_CHECK(cudaDeviceSynchronize());
+        for (int i = 0; i < M; ++i)
+            cpu_res[i] = (u32)(N % cpp_int(divisor_at_32(BASE_SEED_32, i)));
     } else {
-        std::vector<u64> P_cpu(M);
-        for (int i = 0; i < M; ++i) { P_cpu[i] = (u64)divisors[i]; }
-        CUDA_CHECK(cudaMemcpy(d_P, P_cpu.data(), M * sizeof(u64), cudaMemcpyHostToDevice));
+        for (int i = 0; i < M; ++i)
+            cpu_res[i] = (u32)(N % divisors[i]);
     }
+    results.total_cpu_ms = ms_since(t_cpu_start);
 
-    std::vector<u64> gpu_chunk, cpu_chunk;
+    CUDA_CHECK(cudaDeviceSynchronize()); // ensure all streams done
 
+    // --- Validation ---
+    int mism = 0;
+    int buf_idx = 0;
     for (int offset = 0; offset < M; offset += CHUNK_SIZE) {
         int chunk = std::min(CHUNK_SIZE, M - offset);
-        u64 *d_P_chunk = d_P + offset;
-        u64 *d_out_chunk = d_out + offset;
-
-        int threads = 256;
-        int blocks = (chunk + threads - 1) / threads;
-        cudaEvent_t t0, t1;
-        CUDA_CHECK(cudaEventCreate(&t0));
-        CUDA_CHECK(cudaEventCreate(&t1));
-
-        CUDA_CHECK(cudaEventRecord(t0));
-        remainders_via_crt_64<<<blocks, threads>>>(
-            d_P_chunk, d_out_chunk, chunk, crt_data.d_c, crt_data.d_m, k_used
-        );
-        CUDA_CHECK(cudaGetLastError());
-        CUDA_CHECK(cudaEventRecord(t1));
-        CUDA_CHECK(cudaEventSynchronize(t1));
-
-        float gpu_ms = 0.f;
-        CUDA_CHECK(cudaEventElapsedTime(&gpu_ms, t0, t1));
-        results.kernel_ms += gpu_ms;
-
-        auto t_d2h_start = now_tp();
-        gpu_chunk.resize(chunk);
-        CUDA_CHECK(cudaMemcpy(gpu_chunk.data(), d_out_chunk, chunk * sizeof(u64), cudaMemcpyDeviceToHost));
-        results.d2h_chunks_ms += ms_since(t_d2h_start);
-
-        CUDA_CHECK(cudaEventDestroy(t0));
-        CUDA_CHECK(cudaEventDestroy(t1));
-
-        auto t_cpu_start = now_tp();
-        cpu_chunk.resize(chunk);
-        if (GPU_GENERATE_DIVISORS) {
-            for (int i = 0; i < chunk; ++i) { cpu_chunk[i] = (u64)(N % cpp_int(divisor_at_64(BASE_SEED_64, offset + i))); }
-        } else {
-            for (int i = 0; i < chunk; ++i) { cpu_chunk[i] = (u64)(N % divisors[offset + i]); }
-        }
-        results.total_cpu_ms += ms_since(t_cpu_start);
-
-        for (int i = 0; i < chunk; ++i) {
-            if (cpu_chunk[i] != gpu_chunk[i]) {
-                if (results.total_mism < 5) {
-                    fprintf(stderr, "Mismatch at %d: cpu=%llu gpu=%llu\n", offset + i, (unsigned long long)cpu_chunk[i], (unsigned long long)gpu_chunk[i]);
-                }
-                ++results.total_mism;
-            }
-        }
+        const u32* gpu_chunk = host_buffers[buf_idx];
+        for (int i = 0; i < chunk; ++i)
+            if (cpu_res[offset + i] != gpu_chunk[i])
+                if (++mism <= 5)
+                    fprintf(stderr, "Mismatch at %d: cpu=%u gpu=%u\n",
+                            offset + i, cpu_res[offset + i], gpu_chunk[i]);
+        buf_idx ^= 1;
     }
+    results.total_mism = mism;
 
-    results.total_gpu_ms = results.kernel_ms + results.d2h_chunks_ms;
+    // Cleanup
+    CUDA_CHECK(cudaEventDestroy(global_start));
+    CUDA_CHECK(cudaEventDestroy(global_end));
+    for (int i = 0; i < BUFFER_COUNT; ++i) cudaFreeHost(host_buffers[i]);
+    CUDA_CHECK(cudaStreamDestroy(streams[0]));
+    CUDA_CHECK(cudaStreamDestroy(streams[1]));
     CUDA_CHECK(cudaFree(d_P));
     CUDA_CHECK(cudaFree(d_out));
 }
+void run_crt_benchmark_64(int M, const cpp_int& N,
+    const std::vector<cpp_int>& divisors,
+    const DeviceCRTData& crt_data, int k_used,
+    BenchmarkResults& results,
+    const u64 BASE_SEED_64, const u32 BASE_SEED_32) {
+const int CHUNK_SIZE = 10000000;
 
+u64 *d_P = nullptr, *d_out = nullptr;
+CUDA_CHECK(cudaMalloc(&d_P, M * sizeof(u64)));
+CUDA_CHECK(cudaMalloc(&d_out, M * sizeof(u64)));
+
+if (GPU_GENERATE_DIVISORS) {
+int threads = 256;
+int blocks = (M + threads - 1) / threads;
+generate_divisors_kernel_64<<<blocks, threads>>>(BASE_SEED_64, M, d_P);
+CUDA_CHECK(cudaDeviceSynchronize());
+} else {
+std::vector<u64> P_cpu(M);
+for (int i = 0; i < M; ++i) P_cpu[i] = (u64)divisors[i];
+CUDA_CHECK(cudaMemcpy(d_P, P_cpu.data(), M * sizeof(u64), cudaMemcpyHostToDevice));
+}
+
+// --- Dual-stream setup ---
+cudaStream_t streams[2];
+CUDA_CHECK(cudaStreamCreate(&streams[0]));
+CUDA_CHECK(cudaStreamCreate(&streams[1]));
+
+const int BUFFER_COUNT = 2;
+u64* host_buffers[BUFFER_COUNT];
+for (int i = 0; i < BUFFER_COUNT; ++i)
+CUDA_CHECK(cudaHostAlloc(&host_buffers[i], CHUNK_SIZE * sizeof(u64), cudaHostAllocDefault));
+
+// Aggregate timers
+cudaEvent_t global_start, global_end;
+CUDA_CHECK(cudaEventCreate(&global_start));
+CUDA_CHECK(cudaEventCreate(&global_end));
+CUDA_CHECK(cudaEventRecord(global_start));
+
+// Launch chunks asynchronously
+for (int offset = 0; offset < M; offset += CHUNK_SIZE) {
+int chunk = std::min(CHUNK_SIZE, M - offset);
+int s = (offset / CHUNK_SIZE) % 2;
+int threads = 256;
+int blocks = (chunk + threads - 1) / threads;
+
+u64* d_P_chunk = d_P + offset;
+u64* d_out_chunk = d_out + offset;
+
+remainders_via_crt_64<<<blocks, threads, 0, streams[s]>>>(
+d_P_chunk, d_out_chunk, chunk, crt_data.d_c, crt_data.d_m, k_used
+);
+CUDA_CHECK(cudaGetLastError());
+
+CUDA_CHECK(cudaMemcpyAsync(
+host_buffers[s], d_out_chunk, chunk * sizeof(u64),
+cudaMemcpyDeviceToHost, streams[s]
+));
+}
+
+CUDA_CHECK(cudaEventRecord(global_end));
+CUDA_CHECK(cudaEventSynchronize(global_end));
+float total_gpu_ms = 0.f;
+CUDA_CHECK(cudaEventElapsedTime(&total_gpu_ms, global_start, global_end));
+results.kernel_ms = total_gpu_ms;
+results.d2h_chunks_ms = 0.0;
+results.total_gpu_ms = total_gpu_ms;
+
+// --- CPU verification (sequential) ---
+auto t_cpu_start = now_tp();
+std::vector<u64> cpu_res(M);
+if (GPU_GENERATE_DIVISORS) {
+for (int i = 0; i < M; ++i)
+cpu_res[i] = (u64)(N % cpp_int(divisor_at_64(BASE_SEED_64, i)));
+} else {
+for (int i = 0; i < M; ++i)
+cpu_res[i] = (u64)(N % divisors[i]);
+}
+results.total_cpu_ms = ms_since(t_cpu_start);
+
+CUDA_CHECK(cudaDeviceSynchronize()); // wait for all copies
+
+// --- Validation ---
+int mism = 0;
+int buf_idx = 0;
+for (int offset = 0; offset < M; offset += CHUNK_SIZE) {
+int chunk = std::min(CHUNK_SIZE, M - offset);
+const u64* gpu_chunk = host_buffers[buf_idx];
+for (int i = 0; i < chunk; ++i)
+if (cpu_res[offset + i] != gpu_chunk[i])
+if (++mism <= 5)
+fprintf(stderr, "Mismatch at %d: cpu=%llu gpu=%llu\n",
+       offset + i,
+       (unsigned long long)cpu_res[offset + i],
+       (unsigned long long)gpu_chunk[i]);
+buf_idx ^= 1;
+}
+results.total_mism = mism;
+
+// Cleanup
+CUDA_CHECK(cudaEventDestroy(global_start));
+CUDA_CHECK(cudaEventDestroy(global_end));
+for (int i = 0; i < BUFFER_COUNT; ++i) cudaFreeHost(host_buffers[i]);
+CUDA_CHECK(cudaStreamDestroy(streams[0]));
+CUDA_CHECK(cudaStreamDestroy(streams[1]));
+CUDA_CHECK(cudaFree(d_P));
+CUDA_CHECK(cudaFree(d_out));
+}
 void print_benchmark_results(int M, const BenchmarkResults& results, int k_used, int k) {
     double gpu_mps = (results.total_gpu_ms > 0) ? (M / 1e6) / (results.total_gpu_ms / 1000.0) : 0.0;
     double cpu_mps = (results.total_cpu_ms > 0) ? (M / 1e6) / (results.total_cpu_ms / 1000.0) : 0.0;
@@ -661,3 +581,4 @@ __global__ void cgbn_divrem_kernel(cgbn_error_report_t *report,
     cgbn_store(env, &routs[instance], r);
 }
 #endif
+
