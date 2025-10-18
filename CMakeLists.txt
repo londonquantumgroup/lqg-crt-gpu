@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
+cmake_policy(SET CMP0167 OLD)
 project(CRT_Benchmark LANGUAGES CXX CUDA)
 
 # ============================================================
@@ -9,6 +10,9 @@ set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 set(CMAKE_VERBOSE_MAKEFILE ON)
+# ============================================================
+# CMake setup
+# ============================================================
 
 # ============================================================
 # OPTIONS
