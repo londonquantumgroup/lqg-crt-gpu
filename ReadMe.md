@@ -12,3 +12,5 @@ without prior written consent from the inventor or London Quantum Group.
 
 For licensing or research collaboration inquiries, contact:
 research@londonquantumgroup.com
+
+For compliance related questions, contact: compliance@londonquantumgroup.com
